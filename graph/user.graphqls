@@ -1,0 +1,59 @@
+type User {
+	email: String!
+	password: String
+	name: String
+	dateOfBirth: String
+	address: String
+	phone: String
+	googleID: String
+	facebookID: String
+	githubID: String
+	avatar: String
+	deleted: Boolean!
+	deletedAt: String
+	deletedBy: String
+	updatedAt: String
+	updatedBy: String
+	createdAt: String
+	createdBy: String
+	_id: String!
+	roleName: String!
+}
+
+input CreateUserInput {
+	email: String!
+	password: String
+	name: String
+	dateOfBirth: String
+	address: String
+	phone: String
+	googleID: String
+	facebookID: String
+	githubID: String
+	avatar: String
+}
+
+input UpdateUserInput {
+	id: String!
+	email: String!
+	name: String
+	dateOfBirth: String
+	address: String
+	phone: String
+	googleID: String
+	facebookID: String
+	githubID: String
+	avatar: String
+}
+
+type Query {
+	users(keyword: String, page: Int = 1, limit: Int = 10): [User]!
+	user(id: String!): User
+	userByEmail(email: String!): User
+}
+
+type Mutation {
+	createUser(createUserInput: CreateUserInput!): User!
+	updateUser(updateUserInput: UpdateUserInput!): User!
+	removeUser(id: String!): User
+}
