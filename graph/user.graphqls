@@ -2,7 +2,7 @@ type User {
 	email: String!
 	password: String
 	name: String
-	dateOfBirth: String
+	dateOfBirth: Time
 	address: String
 	phone: String
 	googleID: String
@@ -10,13 +10,13 @@ type User {
 	githubID: String
 	avatar: String
 	deleted: Boolean!
-	deletedAt: String
+	deletedAt: Time
 	deletedBy: String
-	updatedAt: String
+	updatedAt: Time
 	updatedBy: String
-	createdAt: String
+	createdAt: Time
 	createdBy: String
-	_id: String!
+	_id: ID!
 	roleName: String!
 }
 

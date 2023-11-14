@@ -16,13 +16,13 @@ type Ingredient {
 	cholesterol: Int
 	sodium: Int
 	deleted: Boolean!
-	deletedAt: String
+	deletedAt: Time
 	deletedBy: String
-	updatedAt: String
+	updatedAt: Time
 	updatedBy: String
-	createdAt: String
+	createdAt: Time
 	createdBy: String
-	_id: String!
+	_id: ID!
 }
 
 input MultiLanguageInput {
@@ -59,7 +59,7 @@ input UpdateIngredientInput {
 }
 
 extend type Query {
-	ingredients(keyword: String, page: Int = 1, limit: Int = 10): [Ingredient]!
+	ingredients(keyword: String, page: Int = 1, limit: Int = 10): [Ingredient]! @hasRole(role: ADMIN) @Auth(index: 1)
 	ingredient(slug: String!): Ingredient
 }
 

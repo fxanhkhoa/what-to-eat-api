@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"what-to-eat/be/graph/model"
+	"what-to-eat/be/shared"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -31,7 +32,7 @@ func (r *mutationResolver) RemoveUser(ctx context.Context, id string) (*model.Us
 
 // Users is the resolver for the users field.
 func (r *queryResolver) Users(ctx context.Context, keyword *string, page *int, limit *int) ([]*model.User, error) {
-	ctxMongo, collection := Init("what-to-eat", "Users")
+	ctxMongo, collection := shared.Init(shared.DatabaseName, "Users")
 	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip(int64(*page) * int64(*limit)).SetLimit(int64(*limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
 	cursor, err := collection.Find(ctxMongo, filter, opts)

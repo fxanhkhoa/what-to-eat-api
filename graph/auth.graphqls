@@ -1,0 +1,17 @@
+type TokenResult {
+    token: String!
+    refreshToken: String!
+}
+
+input LoginInput {
+    token: String!
+}
+
+input RetrieveTokenInput {
+    refreshToken: String!
+}
+
+extend type Mutation {
+    loginWithGoogle(loginInput: LoginInput!): TokenResult
+    retrieveToken(retrieveTokenInput: RetrieveTokenInput!): TokenResult
+}
