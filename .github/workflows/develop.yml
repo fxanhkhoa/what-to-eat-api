@@ -72,7 +72,7 @@ jobs:
     steps:
         - name: executing remote ssh commands using password
           if: github.event_name != 'pull_request'
-          uses: appleboy/ssh-action@master
+          uses: appleboy/ssh-action@v1.0.0
           with:
             host: ${{ secrets.HOST }}
             username: ${{ secrets.USERNAME }}
