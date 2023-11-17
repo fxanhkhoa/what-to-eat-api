@@ -1,0 +1,70 @@
+type MultiLanguage {
+	lang: String!
+	data: String
+}
+
+type Ingredient {
+	slug: String!
+	title: [MultiLanguage]
+	measure: String
+	calories: Int
+	carbohydrate: Int
+	fat: Int
+	ingredientCategory: String
+	weight: Int
+	protein: Int
+	cholesterol: Int
+	sodium: Int
+	deleted: Boolean!
+	deletedAt: Time
+	deletedBy: String
+	updatedAt: Time
+	updatedBy: String
+	createdAt: Time
+	createdBy: String
+	_id: ID!
+}
+
+input MultiLanguageInput {
+	language: String!
+	data: String
+}
+
+input CreateIngredientInput {
+	slug: String!
+	title: [MultiLanguageInput]
+	measure: String
+	calories: Int
+	carbohydrate: Int
+	fat: Int
+	ingredientCategory: String
+	weight: Int
+	protein: Int
+	cholesterol: Int
+	sodium: Int
+}
+
+input UpdateIngredientInput {
+	slug: String!
+	title: [MultiLanguageInput]
+	measure: String
+	calories: Int
+	carbohydrate: Int
+	fat: Int
+	ingredientCategory: String
+	weight: Int
+	protein: Int
+	cholesterol: Int
+	sodium: Int
+}
+
+extend type Query {
+	ingredients(keyword: String, page: Int = 1, limit: Int = 10): [Ingredient]! @hasRole(role: ADMIN) @Auth(index: 1)
+	ingredient(slug: String!): Ingredient
+}
+
+extend type Mutation {
+	createIngredient(createIngredientInput: CreateIngredientInput!): Ingredient!
+	updateIngredient(updateIngredientInput: UpdateIngredientInput!): Ingredient!
+	removeIngredient(slug: String!): Ingredient
+}

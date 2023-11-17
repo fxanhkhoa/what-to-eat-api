@@ -1,0 +1,25 @@
+scalar Time
+
+directive @hasRole(role: Role!) on FIELD_DEFINITION
+
+enum Role {
+    CREATE_USER
+    UPDATE_USER
+    DELETE_USER
+    FIND_USERS
+    FIND_USER
+
+    CREATE_ROLE
+    UPDATE_ROLE
+    DELETE_ROLE
+    FIND_ROLES
+    FIND_ROLE
+
+    CREATE_INGREDIENT
+    UPDATE_INGREDIENT
+    DELETE_INGREDIENT
+    FIND_INGREDIENTS
+    FIND_INGREDIENT
+}
+
+directive @Auth(index: Int) on FIELD_DEFINITION
