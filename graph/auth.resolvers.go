@@ -7,6 +7,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"log"
 	"what-to-eat/be/graph/model"
 	"what-to-eat/be/graph/service"
 )
@@ -15,14 +16,19 @@ import (
 func (r *mutationResolver) LoginWithGoogle(ctx context.Context, loginInput model.LoginInput) (*model.TokenResult, error) {
 	data, err := service.NewAuthService().Login(loginInput.Token)
 	if err != nil {
-		panic(fmt.Errorf(err.Error()))
+		log.Printf("Login Error: %s", err.Error())
 	}
 	return data, nil
 }
 
 // RetrieveToken is the resolver for the retrieveToken field.
 func (r *mutationResolver) RetrieveToken(ctx context.Context, retrieveTokenInput model.RetrieveTokenInput) (*model.TokenResult, error) {
-	panic(fmt.Errorf("not implemented: RetrieveToken - retrieveToken"))
+	token, err := service.NewAuthService().GenerateToken(retrieveTokenInput.RefreshToken)
+	result := model.TokenResult{
+		Token:        token,
+		RefreshToken: retrieveTokenInput.RefreshToken,
+	}
+	return &result, err
 }
 
 // !!! WARNING !!!

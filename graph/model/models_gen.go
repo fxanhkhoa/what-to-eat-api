@@ -23,17 +23,23 @@ type CreateIngredientInput struct {
 	Sodium             *int                  `json:"sodium,omitempty" bson:"sodium"`
 }
 
+type CreateRolePermissionInput struct {
+	Name        string    `json:"name" bson:"name"`
+	Permission  []*string `json:"permission,omitempty" bson:"permission"`
+	Description *string   `json:"description,omitempty" bson:"description"`
+}
+
 type CreateUserInput struct {
-	Email       string  `json:"email" bson:"email"`
-	Password    *string `json:"password,omitempty" bson:"password"`
-	Name        *string `json:"name,omitempty" bson:"name"`
-	DateOfBirth *string `json:"dateOfBirth,omitempty" bson:"dateOfBirth"`
-	Address     *string `json:"address,omitempty" bson:"address"`
-	Phone       *string `json:"phone,omitempty" bson:"phone"`
-	GoogleID    *string `json:"googleID,omitempty" bson:"googleID"`
-	FacebookID  *string `json:"facebookID,omitempty" bson:"facebookID"`
-	GithubID    *string `json:"githubID,omitempty" bson:"githubID"`
-	Avatar      *string `json:"avatar,omitempty" bson:"avatar"`
+	Email       string     `json:"email" bson:"email"`
+	Password    *string    `json:"password,omitempty" bson:"password"`
+	Name        *string    `json:"name,omitempty" bson:"name"`
+	DateOfBirth *time.Time `json:"dateOfBirth,omitempty" bson:"dateOfBirth"`
+	Address     *string    `json:"address,omitempty" bson:"address"`
+	Phone       *string    `json:"phone,omitempty" bson:"phone"`
+	GoogleID    *string    `json:"googleID,omitempty" bson:"googleID"`
+	FacebookID  *string    `json:"facebookID,omitempty" bson:"facebookID"`
+	GithubID    *string    `json:"githubID,omitempty" bson:"githubID"`
+	Avatar      *string    `json:"avatar,omitempty" bson:"avatar"`
 }
 
 type Ingredient struct {
@@ -63,8 +69,8 @@ type LoginInput struct {
 }
 
 type MultiLanguage struct {
-	Language string  `json:"language" bson:"language"`
-	Data     *string `json:"data,omitempty" bson:"data"`
+	Lang string  `json:"lang" bson:"lang"`
+	Data *string `json:"data,omitempty" bson:"data"`
 }
 
 type MultiLanguageInput struct {
@@ -74,6 +80,20 @@ type MultiLanguageInput struct {
 
 type RetrieveTokenInput struct {
 	RefreshToken string `json:"refreshToken" bson:"refreshToken"`
+}
+
+type RolePermission struct {
+	Name        string     `json:"name" bson:"name"`
+	Permission  []*string  `json:"permission,omitempty" bson:"permission"`
+	Description *string    `json:"description,omitempty" bson:"description"`
+	Deleted     bool       `json:"deleted" bson:"deleted"`
+	DeletedAt   *time.Time `json:"deletedAt,omitempty" bson:"deletedAt"`
+	DeletedBy   *string    `json:"deletedBy,omitempty" bson:"deletedBy"`
+	UpdatedAt   *time.Time `json:"updatedAt,omitempty" bson:"updatedAt"`
+	UpdatedBy   *string    `json:"updatedBy,omitempty" bson:"updatedBy"`
+	CreatedAt   *time.Time `json:"createdAt,omitempty" bson:"createdAt"`
+	CreatedBy   *string    `json:"createdBy,omitempty" bson:"createdBy"`
+	ID          string     `json:"_id" bson:"_id,omitempty"`
 }
 
 type TokenResult struct {
@@ -95,17 +115,29 @@ type UpdateIngredientInput struct {
 	Sodium             *int                  `json:"sodium,omitempty" bson:"sodium"`
 }
 
+type UpdateRolePermissionInput struct {
+	ID          string    `json:"id" bson:"id"`
+	Name        string    `json:"name" bson:"name"`
+	Permission  []*string `json:"permission,omitempty" bson:"permission"`
+	Description *string   `json:"description,omitempty" bson:"description"`
+}
+
+type UpdateRoleUserInput struct {
+	ID       string `json:"id" bson:"id"`
+	RoleName string `json:"roleName" bson:"roleName"`
+}
+
 type UpdateUserInput struct {
-	ID          string  `json:"id" bson:"id"`
-	Email       string  `json:"email" bson:"email"`
-	Name        *string `json:"name,omitempty" bson:"name"`
-	DateOfBirth *string `json:"dateOfBirth,omitempty" bson:"dateOfBirth"`
-	Address     *string `json:"address,omitempty" bson:"address"`
-	Phone       *string `json:"phone,omitempty" bson:"phone"`
-	GoogleID    *string `json:"googleID,omitempty" bson:"googleID"`
-	FacebookID  *string `json:"facebookID,omitempty" bson:"facebookID"`
-	GithubID    *string `json:"githubID,omitempty" bson:"githubID"`
-	Avatar      *string `json:"avatar,omitempty" bson:"avatar"`
+	ID          string     `json:"id" bson:"id"`
+	Email       string     `json:"email" bson:"email"`
+	Name        *string    `json:"name,omitempty" bson:"name"`
+	DateOfBirth *time.Time `json:"dateOfBirth,omitempty" bson:"dateOfBirth"`
+	Address     *string    `json:"address,omitempty" bson:"address"`
+	Phone       *string    `json:"phone,omitempty" bson:"phone"`
+	GoogleID    *string    `json:"googleID,omitempty" bson:"googleID"`
+	FacebookID  *string    `json:"facebookID,omitempty" bson:"facebookID"`
+	GithubID    *string    `json:"githubID,omitempty" bson:"githubID"`
+	Avatar      *string    `json:"avatar,omitempty" bson:"avatar"`
 }
 
 type User struct {
@@ -133,18 +165,44 @@ type User struct {
 type Role string
 
 const (
-	RoleAdmin Role = "ADMIN"
-	RoleUser  Role = "USER"
+	RoleCreateUser       Role = "CREATE_USER"
+	RoleUpdateUser       Role = "UPDATE_USER"
+	RoleDeleteUser       Role = "DELETE_USER"
+	RoleFindUsers        Role = "FIND_USERS"
+	RoleFindUser         Role = "FIND_USER"
+	RoleCreateRole       Role = "CREATE_ROLE"
+	RoleUpdateRole       Role = "UPDATE_ROLE"
+	RoleDeleteRole       Role = "DELETE_ROLE"
+	RoleFindRoles        Role = "FIND_ROLES"
+	RoleFindRole         Role = "FIND_ROLE"
+	RoleCreateIngredient Role = "CREATE_INGREDIENT"
+	RoleUpdateIngredient Role = "UPDATE_INGREDIENT"
+	RoleDeleteIngredient Role = "DELETE_INGREDIENT"
+	RoleFindIngredients  Role = "FIND_INGREDIENTS"
+	RoleFindIngredient   Role = "FIND_INGREDIENT"
 )
 
 var AllRole = []Role{
-	RoleAdmin,
-	RoleUser,
+	RoleCreateUser,
+	RoleUpdateUser,
+	RoleDeleteUser,
+	RoleFindUsers,
+	RoleFindUser,
+	RoleCreateRole,
+	RoleUpdateRole,
+	RoleDeleteRole,
+	RoleFindRoles,
+	RoleFindRole,
+	RoleCreateIngredient,
+	RoleUpdateIngredient,
+	RoleDeleteIngredient,
+	RoleFindIngredients,
+	RoleFindIngredient,
 }
 
 func (e Role) IsValid() bool {
 	switch e {
-	case RoleAdmin, RoleUser:
+	case RoleCreateUser, RoleUpdateUser, RoleDeleteUser, RoleFindUsers, RoleFindUser, RoleCreateRole, RoleUpdateRole, RoleDeleteRole, RoleFindRoles, RoleFindRole, RoleCreateIngredient, RoleUpdateIngredient, RoleDeleteIngredient, RoleFindIngredients, RoleFindIngredient:
 		return true
 	}
 	return false

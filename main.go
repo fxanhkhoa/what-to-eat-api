@@ -17,7 +17,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type contextKey struct {
+	name string
+}
+
 const defaultPort = "8080"
+
+var userCtxKey = &contextKey{"user"}
 
 func main() {
 	e := godotenv.Load()
@@ -33,15 +39,20 @@ func main() {
 	firebase.InitFirebase()
 
 	router := mux.NewRouter()
-	router.Use(auth.Middleware())
+
+	authRouter := router.Methods(http.MethodPost).Subrouter()
+	authRouter.HandleFunc("/login", auth.NewAuthController().Login)
+	authRouter.HandleFunc("/retrieve-token", auth.NewAuthController().RetrieveToken)
+
 	c := graph.Config{Resolvers: &graph.Resolver{}}
-	c.Directives.Auth = directive.Auth
 	c.Directives.HasRole = directive.Role
 
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(c))
 
-	router.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	router.Handle("/query", srv)
+	graphRouter := router.Methods(http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete).Subrouter()
+	graphRouter.Use(auth.Middleware())
+	graphRouter.Handle("/", playground.Handler("GraphQL playground", "/query"))
+	graphRouter.Handle("/query", srv)
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, router))

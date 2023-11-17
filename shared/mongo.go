@@ -3,9 +3,11 @@ package shared
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -21,11 +23,76 @@ func InitializeMongoDB() {
 	clientOptions := options.Client().ApplyURI(connectionString)
 	Client, _ = mongo.Connect(ctx, clientOptions)
 	DatabaseName = os.Getenv("DATABASE_NAME")
+
+	indexUserCollection()
+	indexRoleCollection()
+	indexIngredientCollection()
 }
 
-func Init(dbName string, collectionName string) (context.Context, *mongo.Collection) {
+func Init(collectionName string) (context.Context, *mongo.Collection) {
 	ctxMongo, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	collection := Client.Database(dbName).Collection(collectionName)
+	collection := Client.Database(DatabaseName).Collection(collectionName)
 	return ctxMongo, collection
+}
+
+func indexUserCollection() {
+	indexModel := mongo.IndexModel{
+		Keys: bson.D{{Key: "name", Value: "text"}},
+	}
+
+	uniqueIDIndexModel := mongo.IndexModel{
+		Keys:    bson.D{{Key: "email", Value: -1}, {Key: "googleID", Value: -1}},
+		Options: options.Index().SetUnique(true),
+	}
+
+	collection := Client.Database(DatabaseName).Collection("Users")
+	name, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+		indexModel, uniqueIDIndexModel,
+	})
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	log.Printf("Created Index Users: %s \n", name)
+}
+
+func indexRoleCollection() {
+	indexModel := mongo.IndexModel{
+		Keys:    bson.D{{Key: "name", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+
+	collection := Client.Database(DatabaseName).Collection("RolePermissions")
+	name, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+		indexModel,
+	})
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	log.Printf("Created Index RolePermissions: %s \n", name)
+}
+
+func indexIngredientCollection() {
+	indexModel := mongo.IndexModel{
+		Keys:    bson.D{{Key: "title.data", Value: "text"}},
+		Options: options.Index().SetDefaultLanguage("en"),
+	}
+
+	collection := Client.Database(DatabaseName).Collection("Ingredients")
+	name, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+		indexModel,
+	})
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	log.Printf("Created Index Ingredients: %s \n", name)
 }

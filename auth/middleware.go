@@ -2,8 +2,12 @@ package auth
 
 import (
 	"context"
+	"log"
 	"net/http"
+	"os"
+	"strings"
 	"what-to-eat/be/graph/model"
+	"what-to-eat/be/graph/service"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -22,37 +26,40 @@ type CustomClaims struct {
 func Middleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// secret := os.Getenv("SECRET_KEY")
-			// header := r.Header.Get("Authorization")
+			secretKey := os.Getenv("SECRET_KEY")
+			header := r.Header.Get("Authorization")
 
-			// // Allow unauthenticated users in
-			// if header == "" {
-			// 	next.ServeHTTP(w, r)
-			// 	return
-			// }
+			// Allow unauthenticated users in
+			if header == "" {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
 
-			// //validate jwt token
-			// tokenStr := header
-			// token, err := jwt.ParseWithClaims(tokenStr, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-			// 	return []byte(secret), nil
-			// })
+			// validate jwt token
+			tokenStr := strings.Split(header, " ")
+			token, err := jwt.ParseWithClaims(tokenStr[1], &service.CustomClaim{}, func(token *jwt.Token) (interface{}, error) {
+				return []byte(secretKey), nil
+			})
 
-			// if claims, ok := token.Claims.(*CustomClaims); ok && token.Valid {
-			// 	fmt.Printf("%v %v", claims.ID, claims.RegisteredClaims.Issuer)
-			// } else {
-			// 	fmt.Println(err)
-			// }
+			if err != nil {
+				log.Println(err.Error())
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+			} else if claims, ok := token.Claims.(*service.CustomClaim); ok {
+				user, err := service.NewUserService().FindByID(claims.ID)
 
-			// if err != nil {
-			// 	next.ServeHTTP(w, r)
-			// 	return
-			// }
-			// user := model.User{}
-			// // put it in context
-			// ctx := context.WithValue(r.Context(), userCtxKey, &user)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusUnauthorized)
+					return
+				}
 
-			// and call the next with our new context
-			// r = r.WithContext(ctx)
+				ctx := context.WithValue(r.Context(), userCtxKey, user)
+				r = r.WithContext(ctx)
+			} else {
+				log.Println(err.Error())
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+
 			next.ServeHTTP(w, r)
 		})
 	}

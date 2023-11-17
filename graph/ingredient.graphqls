@@ -1,5 +1,5 @@
 type MultiLanguage {
-	language: String!
+	lang: String!
 	data: String
 }
 
