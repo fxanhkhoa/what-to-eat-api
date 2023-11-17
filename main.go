@@ -40,7 +40,7 @@ func main() {
 
 	router := mux.NewRouter()
 
-	authRouter := router.Methods(http.MethodPost).Subrouter()
+	authRouter := router.Methods(http.MethodPost, http.MethodGet).Subrouter()
 	authRouter.HandleFunc("/login", auth.NewAuthController().Login)
 	authRouter.HandleFunc("/retrieve-token", auth.NewAuthController().RetrieveToken)
 
@@ -51,7 +51,8 @@ func main() {
 
 	graphRouter := router.Methods(http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete).Subrouter()
 	graphRouter.Use(auth.Middleware())
-	graphRouter.Handle("/", playground.Handler("GraphQL playground", "/query"))
+
+	authRouter.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	graphRouter.Handle("/query", srv)
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
