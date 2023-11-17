@@ -6,55 +6,55 @@ package graph
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"what-to-eat/be/auth"
 	"what-to-eat/be/graph/model"
-	"what-to-eat/be/shared"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"what-to-eat/be/graph/service"
 )
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, createUserInput model.CreateUserInput) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: CreateUser - createUser"))
+	user := auth.ForContext(ctx)
+	createdUser, err := service.NewUserService().Create(createUserInput, user)
+	return createdUser, err
 }
 
 // UpdateUser is the resolver for the updateUser field.
 func (r *mutationResolver) UpdateUser(ctx context.Context, updateUserInput model.UpdateUserInput) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: UpdateUser - updateUser"))
+	user := auth.ForContext(ctx)
+	updatedUser, err := service.NewUserService().Update(updateUserInput, user)
+	return updatedUser, err
 }
 
 // RemoveUser is the resolver for the removeUser field.
 func (r *mutationResolver) RemoveUser(ctx context.Context, id string) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: RemoveUser - removeUser"))
+	user := auth.ForContext(ctx)
+	updatedUser, err := service.NewUserService().Remove(id, user)
+	return updatedUser, err
+}
+
+// UpdateRoleUser is the resolver for the updateRoleUser field.
+func (r *mutationResolver) UpdateRoleUser(ctx context.Context, updateRoleUserInput model.UpdateRoleUserInput) (*model.User, error) {
+	user := auth.ForContext(ctx)
+	updatedUser, err := service.NewUserService().UpdateRole(updateRoleUserInput.ID, updateRoleUserInput.RoleName, user)
+	return updatedUser, err
 }
 
 // Users is the resolver for the users field.
 func (r *queryResolver) Users(ctx context.Context, keyword *string, page *int, limit *int) ([]*model.User, error) {
-	ctxMongo, collection := shared.Init(shared.DatabaseName, "Users")
-	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip(int64(*page) * int64(*limit)).SetLimit(int64(*limit))
-	filter := bson.D{{Key: "deleted", Value: false}}
-	cursor, err := collection.Find(ctxMongo, filter, opts)
-	if err != nil {
-		log.Fatal(err)
-	}
-	var users []*model.User
-	if err = cursor.All(ctxMongo, &users); err != nil {
-		panic(err)
-	}
-	defer cursor.Close(ctxMongo)
+	users, err := service.NewUserService().Find(keyword, page, limit)
 	return users, err
 }
 
 // User is the resolver for the user field.
 func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: User - user"))
+	user, err := service.NewUserService().FindOne(id)
+	return user, err
 }
 
 // UserByEmail is the resolver for the userByEmail field.
 func (r *queryResolver) UserByEmail(ctx context.Context, email string) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: UserByEmail - userByEmail"))
+	user, err := service.NewUserService().FindByEmail(email)
+	return user, err
 }
 
 // Mutation returns MutationResolver implementation.

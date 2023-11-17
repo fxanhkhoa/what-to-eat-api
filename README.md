@@ -7,3 +7,13 @@ and
 ```
 go generate ./...
 ```
+
+## Start application
+1. Install nodemon
+   ```
+   npm i -g nodemon
+   ```
+2. Run
+    ```
+    sh run.sh
+    ```

@@ -1,0 +1,39 @@
+type RolePermission {
+	name: String!
+	permission: [String]
+	description: String
+	deleted: Boolean!
+	deletedAt: Time
+	deletedBy: String
+	updatedAt: Time
+	updatedBy: String
+	createdAt: Time
+	createdBy: String
+	_id: ID!
+}
+
+input CreateRolePermissionInput {
+	name: String!
+	permission: [String]
+	description: String
+}
+
+input UpdateRolePermissionInput {
+	id: ID!
+	name: String!
+	permission: [String]
+	description: String
+}
+
+extend type Query {
+	rolePermissions(page: Int = 1, limit: Int = 10): [RolePermission]!
+	rolePermission(id: String!): RolePermission
+	rolePermissionByName(name: String!): RolePermission
+	allPermissions(limit: Int = 1000): [String]!
+}
+
+extend type Mutation {
+	createRolePermission(createRoleInput: CreateRolePermissionInput!): RolePermission!
+	updateRolePermission(updateRoleInput: UpdateRolePermissionInput!): RolePermission!
+	removeRolePermission(id: String!): RolePermission
+}

@@ -6,129 +6,40 @@ package graph
 
 import (
 	"context"
-	"log"
-	"time"
+	"what-to-eat/be/auth"
 	"what-to-eat/be/graph/model"
-	"what-to-eat/be/shared"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"what-to-eat/be/graph/service"
 )
 
 // CreateIngredient is the resolver for the createIngredient field.
 func (r *mutationResolver) CreateIngredient(ctx context.Context, createIngredientInput model.CreateIngredientInput) (*model.Ingredient, error) {
-	_, collection := shared.Init(shared.DatabaseName, "Ingredients")
-	var title []*model.MultiLanguage
-	for _, element := range createIngredientInput.Title {
-		title = append(title, &model.MultiLanguage{Language: element.Language, Data: element.Data})
-	}
-	now := time.Now()
-	ingredient := model.Ingredient{
-		Slug:               createIngredientInput.Slug,
-		Title:              title,
-		Measure:            createIngredientInput.Measure,
-		Calories:           createIngredientInput.Calories,
-		Carbohydrate:       createIngredientInput.Carbohydrate,
-		Fat:                createIngredientInput.Fat,
-		IngredientCategory: createIngredientInput.IngredientCategory,
-		Weight:             createIngredientInput.Weight,
-		Protein:            createIngredientInput.Protein,
-		Cholesterol:        createIngredientInput.Cholesterol,
-		Sodium:             createIngredientInput.Sodium,
-		Deleted:            false,
-		UpdatedAt:          &now,
-		UpdatedBy:          new(string),
-		CreatedAt:          &now,
-		CreatedBy:          new(string),
-	}
-	filter := bson.M{"slug": createIngredientInput.Slug, "deleted": true}
-	options := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
-	result := collection.FindOneAndUpdate(ctx, filter, bson.M{"$set": ingredient}, options)
-	if result.Err() != nil {
-		return nil, result.Err()
-	}
-	decodeErr := result.Decode(&ingredient)
-	return &ingredient, decodeErr
+	user := auth.ForContext(ctx)
+	ingredient, err := service.NewIngredientService().Create(createIngredientInput, user)
+	return ingredient, err
 }
 
 // UpdateIngredient is the resolver for the updateIngredient field.
 func (r *mutationResolver) UpdateIngredient(ctx context.Context, updateIngredientInput model.UpdateIngredientInput) (*model.Ingredient, error) {
-	_, collection := shared.Init(shared.DatabaseName, "Ingredients")
-	var title []*model.MultiLanguage
-	for _, element := range updateIngredientInput.Title {
-		title = append(title, &model.MultiLanguage{Language: element.Language, Data: element.Data})
-	}
-	now := time.Now()
-	ingredient := model.Ingredient{
-		Slug:               updateIngredientInput.Slug,
-		Title:              title,
-		Measure:            updateIngredientInput.Measure,
-		Calories:           updateIngredientInput.Calories,
-		Carbohydrate:       updateIngredientInput.Carbohydrate,
-		Fat:                updateIngredientInput.Fat,
-		IngredientCategory: updateIngredientInput.IngredientCategory,
-		Weight:             updateIngredientInput.Weight,
-		Protein:            updateIngredientInput.Protein,
-		Cholesterol:        updateIngredientInput.Cholesterol,
-		Sodium:             updateIngredientInput.Sodium,
-		UpdatedAt:          &now,
-		UpdatedBy:          new(string),
-	}
-	filter := bson.M{"slug": updateIngredientInput.Slug, "deleted": false}
-	options := options.FindOneAndUpdate().SetReturnDocument(options.After)
-	result := collection.FindOneAndUpdate(ctx, filter, bson.M{"$set": ingredient}, options)
-	if result.Err() != nil {
-		return nil, result.Err()
-	}
-	decodeErr := result.Decode(&ingredient)
-	return &ingredient, decodeErr
+	user := auth.ForContext(ctx)
+	ingredient, err := service.NewIngredientService().Update(updateIngredientInput, user)
+	return ingredient, err
 }
 
 // RemoveIngredient is the resolver for the removeIngredient field.
 func (r *mutationResolver) RemoveIngredient(ctx context.Context, slug string) (*model.Ingredient, error) {
-	_, collection := shared.Init(shared.DatabaseName, "Ingredients")
-	now := time.Now()
-	filter := bson.M{"slug": slug, "deleted": false}
-	options := options.FindOneAndUpdate().SetReturnDocument(options.After)
-	result := collection.FindOneAndUpdate(ctx, filter, bson.M{"$set": bson.M{
-		"deleted":   true,
-		"deletedAt": now,
-		"deletedBy": "",
-	}}, options)
-	if result.Err() != nil {
-		return nil, result.Err()
-	}
-	ingredient := model.Ingredient{}
-	decodeErr := result.Decode(&ingredient)
-	return &ingredient, decodeErr
+	user := auth.ForContext(ctx)
+	ingredient, err := service.NewIngredientService().Remove(slug, user)
+	return ingredient, err
 }
 
 // Ingredients is the resolver for the ingredients field.
 func (r *queryResolver) Ingredients(ctx context.Context, keyword *string, page *int, limit *int) ([]*model.Ingredient, error) {
-	_, collection := shared.Init(shared.DatabaseName, "Ingredients")
-	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(*page) - 1) * int64(*limit)).SetLimit(int64(*limit))
-	filter := bson.D{{Key: "deleted", Value: false}}
-	cursor, err := collection.Find(ctx, filter, opts)
-	if err != nil {
-		log.Fatal(err)
-	}
-	var ingredients []*model.Ingredient
-	if err = cursor.All(ctx, &ingredients); err != nil {
-		panic(err)
-	}
-	defer cursor.Close(ctx)
+	ingredients, err := service.NewIngredientService().Find(keyword, page, limit)
 	return ingredients, err
 }
 
 // Ingredient is the resolver for the ingredient field.
 func (r *queryResolver) Ingredient(ctx context.Context, slug string) (*model.Ingredient, error) {
-	_, collection := shared.Init(shared.DatabaseName, "Ingredients")
-	filter := bson.M{"slug": slug}
-	result := collection.FindOne(ctx, filter)
-	if result.Err() != nil {
-		return nil, result.Err()
-	}
-	ingredient := model.Ingredient{}
-	decodeErr := result.Decode(&ingredient)
-	return &ingredient, decodeErr
+	ingredient, err := service.NewIngredientService().FindOne(slug)
+	return ingredient, err
 }

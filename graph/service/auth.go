@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -28,35 +27,35 @@ func NewAuthService() *AuthService {
 
 func (a *AuthService) Login(idToken string) (*model.TokenResult, error) {
 	var data model.TokenResult
-	fmt.Println(idToken)
 	token, err := firebase.FirebaseClient.VerifyIDToken(context.TODO(), idToken)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 		return nil, err
 	}
 
 	queriedUser, err := firebase.FirebaseClient.GetUser(context.TODO(), token.UID)
 	if err != nil {
+		log.Println(err.Error())
 		return nil, err
 	}
 
-	fmt.Println("quereiedUser UID", queriedUser.UID)
 	user, err := NewUserService().FindUserByUID(queriedUser.UID)
-	fmt.Println("user 1", user)
 	if user == nil {
 		user, err = NewUserService().CreateUserWithGoogle(queriedUser)
-		fmt.Println("user 2", user)
 		if err != nil {
+			log.Println(err.Error())
 			return nil, err
 		}
 	}
 
-	refreshToken, err := a.generateRefreshToken(*user)
+	refreshToken, err := a.GenerateRefreshToken(*user)
 	if err != nil {
+		log.Println(err.Error())
 		return nil, err
 	}
-	accessToken, err := a.generateToken(refreshToken)
+	accessToken, err := a.GenerateToken(refreshToken)
 	if err != nil {
+		log.Println(err.Error())
 		return nil, err
 	}
 	data.Token = accessToken
@@ -65,7 +64,7 @@ func (a *AuthService) Login(idToken string) (*model.TokenResult, error) {
 	return &data, nil
 }
 
-func (a *AuthService) generateRefreshToken(user model.User) (string, error) {
+func (a *AuthService) GenerateRefreshToken(user model.User) (string, error) {
 	expireHourRefreshStr := os.Getenv("JWT_EXPIRED_REFRESH")
 	secretKey := os.Getenv("SECRET_KEY")
 	expireHour, errParse := time.ParseDuration(expireHourRefreshStr)
@@ -96,7 +95,7 @@ func (a *AuthService) generateRefreshToken(user model.User) (string, error) {
 	return ss, err
 }
 
-func (a *AuthService) generateToken(refreshToken string) (string, error) {
+func (a *AuthService) GenerateToken(refreshToken string) (string, error) {
 	expireHourStr := os.Getenv("JWT_EXPIRED")
 	secretKey := os.Getenv("SECRET_KEY")
 	expireHour, err := time.ParseDuration(expireHourStr)
@@ -139,9 +138,7 @@ func (a *AuthService) generateToken(refreshToken string) (string, error) {
 				ID:        user.ID,
 			},
 		}
-		log.Println("newClaim", newClaim)
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, newClaim)
-		log.Println("HERE")
 		ss, err := token.SignedString([]byte(secretKey))
 
 		if err != nil {

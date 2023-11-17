@@ -51,7 +51,6 @@ require (
 )
 
 require (
-	firebase.google.com/go v3.13.0+incompatible
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/google/uuid v1.4.0 // indirect
