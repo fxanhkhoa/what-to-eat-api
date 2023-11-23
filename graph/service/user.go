@@ -192,7 +192,7 @@ func (u *UserService) UpdateRole(id string, roleName string, profile *model.User
 
 func (u *UserService) Find(keyword *string, page *int, limit *int) ([]*model.User, error) {
 	_, collection := shared.Init("Users")
-	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip(int64(*page) * int64(*limit)).SetLimit(int64(*limit))
+	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(*page) - 1) * int64(*limit)).SetLimit(int64(*limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
 	cursor, err := collection.Find(context.TODO(), filter, opts)
 	if err != nil {

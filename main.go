@@ -13,17 +13,12 @@ import (
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
 
-type contextKey struct {
-	name string
-}
-
 const defaultPort = "8080"
-
-var userCtxKey = &contextKey{"user"}
 
 func main() {
 	e := godotenv.Load()
@@ -55,6 +50,10 @@ func main() {
 	authRouter.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	graphRouter.Handle("/query", srv)
 
+	headersOk := handlers.AllowedHeaders([]string{"Access-Control-Allow-Origin", "Content-Type", "Authorization"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
+
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	log.Fatal(http.ListenAndServe(":"+port, handlers.CORS(headersOk, originsOk, methodsOk)(router)))
 }
