@@ -9,14 +9,30 @@ import (
 	"time"
 )
 
+type CreateDishInput struct {
+	Slug                 string                    `json:"slug" bson:"slug"`
+	Title                []*MultiLanguageInputD    `json:"title" bson:"title"`
+	ShortDescription     []*MultiLanguageInputD    `json:"shortDescription" bson:"shortDescription"`
+	Content              []*MultiLanguageInputD    `json:"content" bson:"content"`
+	Tags                 []*string                 `json:"tags" bson:"tags"`
+	PreparationTime      *float64                  `json:"preparationTime,omitempty" bson:"preparationTime"`
+	CookingTime          *float64                  `json:"cookingTime,omitempty" bson:"cookingTime"`
+	DifficultLevel       *string                   `json:"difficultLevel,omitempty" bson:"difficultLevel"`
+	MealCategories       []*string                 `json:"mealCategories" bson:"mealCategories"`
+	IngredientCategories []*string                 `json:"ingredientCategories" bson:"ingredientCategories"`
+	Thumbnail            *string                   `json:"thumbnail,omitempty" bson:"thumbnail"`
+	Videos               []*string                 `json:"videos" bson:"videos"`
+	Ingredients          []*IngredientsInDishInput `json:"ingredients" bson:"ingredients"`
+}
+
 type CreateIngredientInput struct {
 	Slug               string                `json:"slug" bson:"slug"`
-	Title              []*MultiLanguageInput `json:"title,omitempty" bson:"title"`
+	Title              []*MultiLanguageInput `json:"title" bson:"title"`
 	Measure            *string               `json:"measure,omitempty" bson:"measure"`
 	Calories           *int                  `json:"calories,omitempty" bson:"calories"`
 	Carbohydrate       *int                  `json:"carbohydrate,omitempty" bson:"carbohydrate"`
 	Fat                *int                  `json:"fat,omitempty" bson:"fat"`
-	IngredientCategory *string               `json:"ingredientCategory,omitempty" bson:"ingredientCategory"`
+	IngredientCategory []*string             `json:"ingredientCategory" bson:"ingredientCategory"`
 	Weight             *int                  `json:"weight,omitempty" bson:"weight"`
 	Protein            *int                  `json:"protein,omitempty" bson:"protein"`
 	Cholesterol        *int                  `json:"cholesterol,omitempty" bson:"cholesterol"`
@@ -42,14 +58,38 @@ type CreateUserInput struct {
 	Avatar      *string    `json:"avatar,omitempty" bson:"avatar"`
 }
 
+type Dish struct {
+	Slug                 string               `json:"slug" bson:"slug"`
+	Title                []*MultiLanguageD    `json:"title" bson:"title"`
+	ShortDescription     []*MultiLanguageD    `json:"shortDescription" bson:"shortDescription"`
+	Content              []*MultiLanguageD    `json:"content" bson:"content"`
+	Tags                 []*string            `json:"tags" bson:"tags"`
+	PreparationTime      *float64             `json:"preparationTime,omitempty" bson:"preparationTime"`
+	CookingTime          *float64             `json:"cookingTime,omitempty" bson:"cookingTime"`
+	DifficultLevel       *string              `json:"difficultLevel,omitempty" bson:"difficultLevel"`
+	MealCategories       []*string            `json:"mealCategories" bson:"mealCategories"`
+	IngredientCategories []*string            `json:"ingredientCategories" bson:"ingredientCategories"`
+	Thumbnail            *string              `json:"thumbnail,omitempty" bson:"thumbnail"`
+	Videos               []*string            `json:"videos" bson:"videos"`
+	Ingredients          []*IngredientsInDish `json:"ingredients" bson:"ingredients"`
+	Deleted              bool                 `json:"deleted" bson:"deleted"`
+	DeletedAt            *time.Time           `json:"deletedAt,omitempty" bson:"deletedAt"`
+	DeletedBy            *string              `json:"deletedBy,omitempty" bson:"deletedBy"`
+	UpdatedAt            *time.Time           `json:"updatedAt,omitempty" bson:"updatedAt"`
+	UpdatedBy            *string              `json:"updatedBy,omitempty" bson:"updatedBy"`
+	CreatedAt            *time.Time           `json:"createdAt,omitempty" bson:"createdAt"`
+	CreatedBy            *string              `json:"createdBy,omitempty" bson:"createdBy"`
+	ID                   string               `json:"_id" bson:"_id,omitempty"`
+}
+
 type Ingredient struct {
 	Slug               string           `json:"slug" bson:"slug"`
-	Title              []*MultiLanguage `json:"title,omitempty" bson:"title"`
+	Title              []*MultiLanguage `json:"title" bson:"title"`
 	Measure            *string          `json:"measure,omitempty" bson:"measure"`
 	Calories           *int             `json:"calories,omitempty" bson:"calories"`
 	Carbohydrate       *int             `json:"carbohydrate,omitempty" bson:"carbohydrate"`
 	Fat                *int             `json:"fat,omitempty" bson:"fat"`
-	IngredientCategory *string          `json:"ingredientCategory,omitempty" bson:"ingredientCategory"`
+	IngredientCategory []*string        `json:"ingredientCategory" bson:"ingredientCategory"`
 	Weight             *int             `json:"weight,omitempty" bson:"weight"`
 	Protein            *int             `json:"protein,omitempty" bson:"protein"`
 	Cholesterol        *int             `json:"cholesterol,omitempty" bson:"cholesterol"`
@@ -64,6 +104,18 @@ type Ingredient struct {
 	ID                 string           `json:"_id" bson:"_id,omitempty"`
 }
 
+type IngredientsInDish struct {
+	Quantity float64 `json:"quantity" bson:"quantity"`
+	Slug     string  `json:"slug" bson:"slug"`
+	Note     *string `json:"note,omitempty" bson:"note"`
+}
+
+type IngredientsInDishInput struct {
+	Quantity float64 `json:"quantity" bson:"quantity"`
+	Slug     string  `json:"slug" bson:"slug"`
+	Note     *string `json:"note,omitempty" bson:"note"`
+}
+
 type LoginInput struct {
 	Token string `json:"token" bson:"token"`
 }
@@ -74,8 +126,18 @@ type MultiLanguage struct {
 }
 
 type MultiLanguageInput struct {
-	Language string  `json:"language" bson:"language"`
-	Data     *string `json:"data,omitempty" bson:"data"`
+	Lang string  `json:"lang" bson:"lang"`
+	Data *string `json:"data,omitempty" bson:"data"`
+}
+
+type MultiLanguageInputD struct {
+	Lang string  `json:"lang" bson:"lang"`
+	Data *string `json:"data,omitempty" bson:"data"`
+}
+
+type MultiLanguageD struct {
+	Lang string  `json:"lang" bson:"lang"`
+	Data *string `json:"data,omitempty" bson:"data"`
 }
 
 type RetrieveTokenInput struct {
@@ -101,14 +163,30 @@ type TokenResult struct {
 	RefreshToken string `json:"refreshToken" bson:"refreshToken"`
 }
 
+type UpdateDishInput struct {
+	Slug                 string                    `json:"slug" bson:"slug"`
+	Title                []*MultiLanguageInputD    `json:"title" bson:"title"`
+	ShortDescription     []*MultiLanguageInputD    `json:"shortDescription" bson:"shortDescription"`
+	Content              []*MultiLanguageInputD    `json:"content" bson:"content"`
+	Tags                 []*string                 `json:"tags" bson:"tags"`
+	PreparationTime      *float64                  `json:"preparationTime,omitempty" bson:"preparationTime"`
+	CookingTime          *float64                  `json:"cookingTime,omitempty" bson:"cookingTime"`
+	DifficultLevel       *string                   `json:"difficultLevel,omitempty" bson:"difficultLevel"`
+	MealCategories       []*string                 `json:"mealCategories" bson:"mealCategories"`
+	IngredientCategories []*string                 `json:"ingredientCategories" bson:"ingredientCategories"`
+	Thumbnail            *string                   `json:"thumbnail,omitempty" bson:"thumbnail"`
+	Videos               []*string                 `json:"videos" bson:"videos"`
+	Ingredients          []*IngredientsInDishInput `json:"ingredients" bson:"ingredients"`
+}
+
 type UpdateIngredientInput struct {
 	Slug               string                `json:"slug" bson:"slug"`
-	Title              []*MultiLanguageInput `json:"title,omitempty" bson:"title"`
+	Title              []*MultiLanguageInput `json:"title" bson:"title"`
 	Measure            *string               `json:"measure,omitempty" bson:"measure"`
 	Calories           *int                  `json:"calories,omitempty" bson:"calories"`
 	Carbohydrate       *int                  `json:"carbohydrate,omitempty" bson:"carbohydrate"`
 	Fat                *int                  `json:"fat,omitempty" bson:"fat"`
-	IngredientCategory *string               `json:"ingredientCategory,omitempty" bson:"ingredientCategory"`
+	IngredientCategory []*string             `json:"ingredientCategory" bson:"ingredientCategory"`
 	Weight             *int                  `json:"weight,omitempty" bson:"weight"`
 	Protein            *int                  `json:"protein,omitempty" bson:"protein"`
 	Cholesterol        *int                  `json:"cholesterol,omitempty" bson:"cholesterol"`
@@ -180,6 +258,11 @@ const (
 	RoleDeleteIngredient Role = "DELETE_INGREDIENT"
 	RoleFindIngredients  Role = "FIND_INGREDIENTS"
 	RoleFindIngredient   Role = "FIND_INGREDIENT"
+	RoleCreateDish       Role = "CREATE_DISH"
+	RoleUpdateDish       Role = "UPDATE_DISH"
+	RoleDeleteDish       Role = "DELETE_DISH"
+	RoleFindDishes       Role = "FIND_DISHES"
+	RoleFindDish         Role = "FIND_DISH"
 )
 
 var AllRole = []Role{
@@ -198,11 +281,16 @@ var AllRole = []Role{
 	RoleDeleteIngredient,
 	RoleFindIngredients,
 	RoleFindIngredient,
+	RoleCreateDish,
+	RoleUpdateDish,
+	RoleDeleteDish,
+	RoleFindDishes,
+	RoleFindDish,
 }
 
 func (e Role) IsValid() bool {
 	switch e {
-	case RoleCreateUser, RoleUpdateUser, RoleDeleteUser, RoleFindUsers, RoleFindUser, RoleCreateRole, RoleUpdateRole, RoleDeleteRole, RoleFindRoles, RoleFindRole, RoleCreateIngredient, RoleUpdateIngredient, RoleDeleteIngredient, RoleFindIngredients, RoleFindIngredient:
+	case RoleCreateUser, RoleUpdateUser, RoleDeleteUser, RoleFindUsers, RoleFindUser, RoleCreateRole, RoleUpdateRole, RoleDeleteRole, RoleFindRoles, RoleFindRole, RoleCreateIngredient, RoleUpdateIngredient, RoleDeleteIngredient, RoleFindIngredients, RoleFindIngredient, RoleCreateDish, RoleUpdateDish, RoleDeleteDish, RoleFindDishes, RoleFindDish:
 		return true
 	}
 	return false

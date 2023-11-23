@@ -21,7 +21,7 @@ func (is *IngredientService) Create(createIngredientInput model.CreateIngredient
 	_, collection := shared.Init("Ingredients")
 	var title []*model.MultiLanguage
 	for _, element := range createIngredientInput.Title {
-		title = append(title, &model.MultiLanguage{Lang: element.Language, Data: element.Data})
+		title = append(title, &model.MultiLanguage{Lang: element.Lang, Data: element.Data})
 	}
 	now := time.Now()
 	ingredient := model.Ingredient{
@@ -56,7 +56,7 @@ func (is *IngredientService) Update(updateIngredientInput model.UpdateIngredient
 	_, collection := shared.Init("Ingredients")
 	var title []*model.MultiLanguage
 	for _, element := range updateIngredientInput.Title {
-		title = append(title, &model.MultiLanguage{Lang: element.Language, Data: element.Data})
+		title = append(title, &model.MultiLanguage{Lang: element.Lang, Data: element.Data})
 	}
 	now := time.Now()
 	ingredient := model.Ingredient{
@@ -72,10 +72,10 @@ func (is *IngredientService) Update(updateIngredientInput model.UpdateIngredient
 		Cholesterol:        updateIngredientInput.Cholesterol,
 		Sodium:             updateIngredientInput.Sodium,
 		UpdatedAt:          &now,
-		UpdatedBy:          new(string),
+		UpdatedBy:          &profile.ID,
 	}
 	filter := bson.M{"slug": updateIngredientInput.Slug, "deleted": false}
-	options := options.FindOneAndUpdate().SetReturnDocument(options.After)
+	options := options.FindOneAndUpdate().SetReturnDocument(options.After).SetUpsert(true)
 	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": ingredient}, options)
 	if result.Err() != nil {
 		return nil, result.Err()
@@ -92,7 +92,7 @@ func (is *IngredientService) Remove(slug string, profile *model.User) (*model.In
 	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": bson.M{
 		"deleted":   true,
 		"deletedAt": now,
-		"deletedBy": "",
+		"deletedBy": profile.ID,
 	}}, options)
 	if result.Err() != nil {
 		return nil, result.Err()

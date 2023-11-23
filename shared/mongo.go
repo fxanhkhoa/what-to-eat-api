@@ -27,6 +27,7 @@ func InitializeMongoDB() {
 	indexUserCollection()
 	indexRoleCollection()
 	indexIngredientCollection()
+	indexDishCollection()
 }
 
 func Init(collectionName string) (context.Context, *mongo.Collection) {
@@ -95,4 +96,23 @@ func indexIngredientCollection() {
 	}
 
 	log.Printf("Created Index Ingredients: %s \n", name)
+}
+
+func indexDishCollection() {
+	indexModel := mongo.IndexModel{
+		Keys:    bson.D{{Key: "title.data", Value: "text"}},
+		Options: options.Index().SetDefaultLanguage("en"),
+	}
+
+	collection := Client.Database(DatabaseName).Collection("Dishes")
+	name, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+		indexModel,
+	})
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	log.Printf("Created Index Dishes: %s \n", name)
 }

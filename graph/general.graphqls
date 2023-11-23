@@ -20,6 +20,12 @@ enum Role {
     DELETE_INGREDIENT
     FIND_INGREDIENTS
     FIND_INGREDIENT
+
+    CREATE_DISH
+    UPDATE_DISH
+    DELETE_DISH
+    FIND_DISHES
+    FIND_DISH
 }
 
 directive @Auth(index: Int) on FIELD_DEFINITION

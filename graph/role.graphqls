@@ -26,14 +26,14 @@ input UpdateRolePermissionInput {
 }
 
 extend type Query {
-	rolePermissions(page: Int = 1, limit: Int = 10): [RolePermission]!
-	rolePermission(id: String!): RolePermission
-	rolePermissionByName(name: String!): RolePermission
-	allPermissions(limit: Int = 1000): [String]!
+	rolePermissions(page: Int = 1, limit: Int = 10): [RolePermission]! @hasRole(role: FIND_ROLES)
+	rolePermission(id: String!): RolePermission @hasRole(role: FIND_ROLE)
+	rolePermissionByName(name: String!): RolePermission @hasRole(role: FIND_ROLE)
+	allPermissions(limit: Int = 1000): [String]! @hasRole(role: FIND_ROLES)
 }
 
 extend type Mutation {
-	createRolePermission(createRoleInput: CreateRolePermissionInput!): RolePermission!
-	updateRolePermission(updateRoleInput: UpdateRolePermissionInput!): RolePermission!
-	removeRolePermission(id: String!): RolePermission
+	createRolePermission(createRoleInput: CreateRolePermissionInput!): RolePermission! @hasRole(role: CREATE_ROLE)
+	updateRolePermission(updateRoleInput: UpdateRolePermissionInput!): RolePermission! @hasRole(role: UPDATE_ROLE)
+	removeRolePermission(id: String!): RolePermission @hasRole(role: DELETE_ROLE)
 }

@@ -5,12 +5,12 @@ type MultiLanguage {
 
 type Ingredient {
 	slug: String!
-	title: [MultiLanguage]
+	title: [MultiLanguage]!
 	measure: String
 	calories: Int
 	carbohydrate: Int
 	fat: Int
-	ingredientCategory: String
+	ingredientCategory: [String]!
 	weight: Int
 	protein: Int
 	cholesterol: Int
@@ -26,18 +26,18 @@ type Ingredient {
 }
 
 input MultiLanguageInput {
-	language: String!
+	lang: String!
 	data: String
 }
 
 input CreateIngredientInput {
 	slug: String!
-	title: [MultiLanguageInput]
+	title: [MultiLanguageInput]!
 	measure: String
 	calories: Int
 	carbohydrate: Int
 	fat: Int
-	ingredientCategory: String
+	ingredientCategory: [String]!
 	weight: Int
 	protein: Int
 	cholesterol: Int
@@ -46,12 +46,12 @@ input CreateIngredientInput {
 
 input UpdateIngredientInput {
 	slug: String!
-	title: [MultiLanguageInput]
+	title: [MultiLanguageInput]!
 	measure: String
 	calories: Int
 	carbohydrate: Int
 	fat: Int
-	ingredientCategory: String
+	ingredientCategory: [String]!
 	weight: Int
 	protein: Int
 	cholesterol: Int
@@ -59,12 +59,12 @@ input UpdateIngredientInput {
 }
 
 extend type Query {
-	ingredients(keyword: String, page: Int = 1, limit: Int = 10): [Ingredient]! @hasRole(role: ADMIN) @Auth(index: 1)
-	ingredient(slug: String!): Ingredient
+	ingredients(keyword: String, page: Int = 1, limit: Int = 10): [Ingredient]! @hasRole(role: FIND_INGREDIENTS)
+	ingredient(slug: String!): Ingredient @hasRole(role: FIND_INGREDIENT)
 }
 
 extend type Mutation {
-	createIngredient(createIngredientInput: CreateIngredientInput!): Ingredient!
-	updateIngredient(updateIngredientInput: UpdateIngredientInput!): Ingredient!
-	removeIngredient(slug: String!): Ingredient
+	createIngredient(createIngredientInput: CreateIngredientInput!): Ingredient! @hasRole(role: CREATE_INGREDIENT)
+	updateIngredient(updateIngredientInput: UpdateIngredientInput!): Ingredient! @hasRole(role: UPDATE_INGREDIENT)
+	removeIngredient(slug: String!): Ingredient! @hasRole(role: DELETE_INGREDIENT)
 }
