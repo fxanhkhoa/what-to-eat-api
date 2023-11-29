@@ -56,6 +56,7 @@ func (ds *DishService) Create(createDishInput model.CreateDishInput, profile *mo
 		Thumbnail:            createDishInput.Thumbnail,
 		Videos:               createDishInput.Videos,
 		Ingredients:          ingredients,
+		RelatedDishes:        createDishInput.RelatedDishes,
 		Deleted:              false,
 		UpdatedAt:            &now,
 		UpdatedBy:            &profile.ID,
@@ -112,6 +113,7 @@ func (ds *DishService) Update(updateDishInput model.UpdateDishInput, profile *mo
 		Thumbnail:            updateDishInput.Thumbnail,
 		Videos:               updateDishInput.Videos,
 		Ingredients:          ingredients,
+		RelatedDishes:        updateDishInput.RelatedDishes,
 		UpdatedAt:            &now,
 		UpdatedBy:            &profile.ID,
 	}

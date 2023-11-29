@@ -64,6 +64,7 @@ type ComplexityRoot struct {
 		Ingredients          func(childComplexity int) int
 		MealCategories       func(childComplexity int) int
 		PreparationTime      func(childComplexity int) int
+		RelatedDishes        func(childComplexity int) int
 		ShortDescription     func(childComplexity int) int
 		Slug                 func(childComplexity int) int
 		Tags                 func(childComplexity int) int
@@ -326,6 +327,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Dish.PreparationTime(childComplexity), true
+
+	case "Dish.relatedDishes":
+		if e.complexity.Dish.RelatedDishes == nil {
+			break
+		}
+
+		return e.complexity.Dish.RelatedDishes(childComplexity), true
 
 	case "Dish.shortDescription":
 		if e.complexity.Dish.ShortDescription == nil {
@@ -2361,6 +2369,50 @@ func (ec *executionContext) fieldContext_Dish_ingredients(ctx context.Context, f
 				return ec.fieldContext_IngredientsInDish_note(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type IngredientsInDish", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Dish_relatedDishes(ctx context.Context, field graphql.CollectedField, obj *model.Dish) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Dish_relatedDishes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RelatedDishes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*string)
+	fc.Result = res
+	return ec.marshalNString2ᚕᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Dish_relatedDishes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Dish",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4477,6 +4529,8 @@ func (ec *executionContext) fieldContext_Mutation_createDish(ctx context.Context
 				return ec.fieldContext_Dish_videos(ctx, field)
 			case "ingredients":
 				return ec.fieldContext_Dish_ingredients(ctx, field)
+			case "relatedDishes":
+				return ec.fieldContext_Dish_relatedDishes(ctx, field)
 			case "deleted":
 				return ec.fieldContext_Dish_deleted(ctx, field)
 			case "deletedAt":
@@ -4600,6 +4654,8 @@ func (ec *executionContext) fieldContext_Mutation_updateDish(ctx context.Context
 				return ec.fieldContext_Dish_videos(ctx, field)
 			case "ingredients":
 				return ec.fieldContext_Dish_ingredients(ctx, field)
+			case "relatedDishes":
+				return ec.fieldContext_Dish_relatedDishes(ctx, field)
 			case "deleted":
 				return ec.fieldContext_Dish_deleted(ctx, field)
 			case "deletedAt":
@@ -4723,6 +4779,8 @@ func (ec *executionContext) fieldContext_Mutation_removeDish(ctx context.Context
 				return ec.fieldContext_Dish_videos(ctx, field)
 			case "ingredients":
 				return ec.fieldContext_Dish_ingredients(ctx, field)
+			case "relatedDishes":
+				return ec.fieldContext_Dish_relatedDishes(ctx, field)
 			case "deleted":
 				return ec.fieldContext_Dish_deleted(ctx, field)
 			case "deletedAt":
@@ -5880,6 +5938,8 @@ func (ec *executionContext) fieldContext_Query_dishes(ctx context.Context, field
 				return ec.fieldContext_Dish_videos(ctx, field)
 			case "ingredients":
 				return ec.fieldContext_Dish_ingredients(ctx, field)
+			case "relatedDishes":
+				return ec.fieldContext_Dish_relatedDishes(ctx, field)
 			case "deleted":
 				return ec.fieldContext_Dish_deleted(ctx, field)
 			case "deletedAt":
@@ -6000,6 +6060,8 @@ func (ec *executionContext) fieldContext_Query_dish(ctx context.Context, field g
 				return ec.fieldContext_Dish_videos(ctx, field)
 			case "ingredients":
 				return ec.fieldContext_Dish_ingredients(ctx, field)
+			case "relatedDishes":
+				return ec.fieldContext_Dish_relatedDishes(ctx, field)
 			case "deleted":
 				return ec.fieldContext_Dish_deleted(ctx, field)
 			case "deletedAt":
@@ -9899,7 +9961,7 @@ func (ec *executionContext) unmarshalInputCreateDishInput(ctx context.Context, o
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"slug", "title", "shortDescription", "content", "tags", "preparationTime", "cookingTime", "difficultLevel", "mealCategories", "ingredientCategories", "thumbnail", "videos", "ingredients"}
+	fieldsInOrder := [...]string{"slug", "title", "shortDescription", "content", "tags", "preparationTime", "cookingTime", "difficultLevel", "mealCategories", "ingredientCategories", "thumbnail", "videos", "ingredients", "relatedDishes"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -10023,6 +10085,15 @@ func (ec *executionContext) unmarshalInputCreateDishInput(ctx context.Context, o
 				return it, err
 			}
 			it.Ingredients = data
+		case "relatedDishes":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("relatedDishes"))
+			data, err := ec.unmarshalNString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RelatedDishes = data
 		}
 	}
 
@@ -10493,7 +10564,7 @@ func (ec *executionContext) unmarshalInputUpdateDishInput(ctx context.Context, o
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"slug", "title", "shortDescription", "content", "tags", "preparationTime", "cookingTime", "difficultLevel", "mealCategories", "ingredientCategories", "thumbnail", "videos", "ingredients"}
+	fieldsInOrder := [...]string{"slug", "title", "shortDescription", "content", "tags", "preparationTime", "cookingTime", "difficultLevel", "mealCategories", "ingredientCategories", "thumbnail", "videos", "ingredients", "relatedDishes"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -10617,6 +10688,15 @@ func (ec *executionContext) unmarshalInputUpdateDishInput(ctx context.Context, o
 				return it, err
 			}
 			it.Ingredients = data
+		case "relatedDishes":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("relatedDishes"))
+			data, err := ec.unmarshalNString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RelatedDishes = data
 		}
 	}
 
@@ -11015,6 +11095,11 @@ func (ec *executionContext) _Dish(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "ingredients":
 			out.Values[i] = ec._Dish_ingredients(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "relatedDishes":
+			out.Values[i] = ec._Dish_relatedDishes(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

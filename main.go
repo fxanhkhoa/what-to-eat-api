@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"what-to-eat/be/auth"
+	"what-to-eat/be/controllers"
 	"what-to-eat/be/directive"
 	"what-to-eat/be/firebase"
 	"what-to-eat/be/graph"
@@ -33,7 +34,15 @@ func main() {
 	shared.InitializeMongoDB()
 	firebase.InitFirebase()
 
-	router := mux.NewRouter()
+	router := mux.NewRouter().StrictSlash(true)
+
+	dishRouter := router.PathPrefix("/dish").Subrouter()
+	dishRouter.HandleFunc("/", controllers.NewDishController().Find).Methods("GET")
+	dishRouter.HandleFunc("/{slug}", controllers.NewDishController().FindOne).Methods("GET")
+
+	ingredientRouter := router.PathPrefix("/ingredient").Subrouter()
+	ingredientRouter.HandleFunc("/", controllers.NewIngredientController().Find).Methods("GET")
+	ingredientRouter.HandleFunc("/{slug}", controllers.NewIngredientController().FindOne).Methods("GET")
 
 	authRouter := router.Methods(http.MethodPost, http.MethodGet).Subrouter()
 	authRouter.HandleFunc("/login", auth.NewAuthController().Login)

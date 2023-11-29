@@ -23,6 +23,7 @@ type Dish {
 	thumbnail: String
 	videos: [String]!
 	ingredients: [IngredientsInDish]!
+	relatedDishes: [String]!
 	deleted: Boolean!
 	deletedAt: Time
 	deletedBy: String
@@ -58,6 +59,7 @@ input CreateDishInput {
 	thumbnail: String
 	videos: [String]!
 	ingredients: [IngredientsInDishInput]!
+	relatedDishes: [String]!
 }
 
 input UpdateDishInput {
@@ -74,6 +76,7 @@ input UpdateDishInput {
 	thumbnail: String
 	videos: [String]!
 	ingredients: [IngredientsInDishInput]!
+	relatedDishes: [String]!
 }
 
 extend type Query {
