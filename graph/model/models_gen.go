@@ -23,6 +23,7 @@ type CreateDishInput struct {
 	Thumbnail            *string                   `json:"thumbnail,omitempty" bson:"thumbnail"`
 	Videos               []*string                 `json:"videos" bson:"videos"`
 	Ingredients          []*IngredientsInDishInput `json:"ingredients" bson:"ingredients"`
+	RelatedDishes        []*string                 `json:"relatedDishes" bson:"relatedDishes"`
 }
 
 type CreateIngredientInput struct {
@@ -72,6 +73,7 @@ type Dish struct {
 	Thumbnail            *string              `json:"thumbnail,omitempty" bson:"thumbnail"`
 	Videos               []*string            `json:"videos" bson:"videos"`
 	Ingredients          []*IngredientsInDish `json:"ingredients" bson:"ingredients"`
+	RelatedDishes        []*string            `json:"relatedDishes" bson:"relatedDishes"`
 	Deleted              bool                 `json:"deleted" bson:"deleted"`
 	DeletedAt            *time.Time           `json:"deletedAt,omitempty" bson:"deletedAt"`
 	DeletedBy            *string              `json:"deletedBy,omitempty" bson:"deletedBy"`
@@ -177,6 +179,7 @@ type UpdateDishInput struct {
 	Thumbnail            *string                   `json:"thumbnail,omitempty" bson:"thumbnail"`
 	Videos               []*string                 `json:"videos" bson:"videos"`
 	Ingredients          []*IngredientsInDishInput `json:"ingredients" bson:"ingredients"`
+	RelatedDishes        []*string                 `json:"relatedDishes" bson:"relatedDishes"`
 }
 
 type UpdateIngredientInput struct {
