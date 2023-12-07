@@ -15,6 +15,7 @@ type Ingredient {
 	protein: Int
 	cholesterol: Int
 	sodium: Int
+	images: [String]!
 	deleted: Boolean!
 	deletedAt: Time
 	deletedBy: String
@@ -42,6 +43,7 @@ input CreateIngredientInput {
 	protein: Int
 	cholesterol: Int
 	sodium: Int
+	images: [String]!
 }
 
 input UpdateIngredientInput {
@@ -52,6 +54,7 @@ input UpdateIngredientInput {
 	carbohydrate: Int
 	fat: Int
 	ingredientCategory: [String]!
+	images: [String]!
 	weight: Int
 	protein: Int
 	cholesterol: Int

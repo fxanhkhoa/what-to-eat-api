@@ -38,6 +38,7 @@ type CreateIngredientInput struct {
 	Protein            *int                  `json:"protein,omitempty" bson:"protein"`
 	Cholesterol        *int                  `json:"cholesterol,omitempty" bson:"cholesterol"`
 	Sodium             *int                  `json:"sodium,omitempty" bson:"sodium"`
+	Images             []*string             `json:"images" bson:"images"`
 }
 
 type CreateRolePermissionInput struct {
@@ -96,6 +97,7 @@ type Ingredient struct {
 	Protein            *int             `json:"protein,omitempty" bson:"protein"`
 	Cholesterol        *int             `json:"cholesterol,omitempty" bson:"cholesterol"`
 	Sodium             *int             `json:"sodium,omitempty" bson:"sodium"`
+	Images             []*string        `json:"images" bson:"images"`
 	Deleted            bool             `json:"deleted" bson:"deleted"`
 	DeletedAt          *time.Time       `json:"deletedAt,omitempty" bson:"deletedAt"`
 	DeletedBy          *string          `json:"deletedBy,omitempty" bson:"deletedBy"`
@@ -190,6 +192,7 @@ type UpdateIngredientInput struct {
 	Carbohydrate       *int                  `json:"carbohydrate,omitempty" bson:"carbohydrate"`
 	Fat                *int                  `json:"fat,omitempty" bson:"fat"`
 	IngredientCategory []*string             `json:"ingredientCategory" bson:"ingredientCategory"`
+	Images             []*string             `json:"images" bson:"images"`
 	Weight             *int                  `json:"weight,omitempty" bson:"weight"`
 	Protein            *int                  `json:"protein,omitempty" bson:"protein"`
 	Cholesterol        *int                  `json:"cholesterol,omitempty" bson:"cholesterol"`

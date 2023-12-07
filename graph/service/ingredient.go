@@ -36,6 +36,7 @@ func (is *IngredientService) Create(createIngredientInput model.CreateIngredient
 		Protein:            createIngredientInput.Protein,
 		Cholesterol:        createIngredientInput.Cholesterol,
 		Sodium:             createIngredientInput.Sodium,
+		Images:             createIngredientInput.Images,
 		Deleted:            false,
 		UpdatedAt:          &now,
 		UpdatedBy:          new(string),
@@ -71,6 +72,7 @@ func (is *IngredientService) Update(updateIngredientInput model.UpdateIngredient
 		Protein:            updateIngredientInput.Protein,
 		Cholesterol:        updateIngredientInput.Cholesterol,
 		Sodium:             updateIngredientInput.Sodium,
+		Images:             updateIngredientInput.Images,
 		UpdatedAt:          &now,
 		UpdatedBy:          &profile.ID,
 	}
