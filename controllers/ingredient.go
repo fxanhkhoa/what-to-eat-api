@@ -41,8 +41,10 @@ func (ic *IngredientController) Find(w http.ResponseWriter, r *http.Request) {
 
 	keywordStr := r.URL.Query().Get("keyword")
 	var keyword *string
-	if keywordStr != "" {
+	if keywordStr == "" {
 		keyword = nil
+	} else {
+		keyword = &keywordStr
 	}
 
 	ingredients, err := service.NewIngredientService().Find(keyword, &page, &limit)
