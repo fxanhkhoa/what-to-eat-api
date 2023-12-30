@@ -2,7 +2,6 @@ package shared
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -17,7 +16,6 @@ var DatabaseName string
 
 func InitializeMongoDB() {
 	connectionString := os.Getenv("MONGODB_CONNECTION_STRING")
-	fmt.Println(connectionString)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	clientOptions := options.Client().ApplyURI(connectionString)

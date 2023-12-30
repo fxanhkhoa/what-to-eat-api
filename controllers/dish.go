@@ -41,8 +41,10 @@ func (dc *DishController) Find(w http.ResponseWriter, r *http.Request) {
 
 	keywordStr := r.URL.Query().Get("keyword")
 	var keyword *string
-	if keywordStr != "" {
+	if keywordStr == "" {
 		keyword = nil
+	} else {
+		keyword = &keywordStr
 	}
 
 	dishes, err := service.NewDishService().Find(keyword, &page, &limit)
