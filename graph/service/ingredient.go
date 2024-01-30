@@ -134,3 +134,17 @@ func (is *IngredientService) FindOne(slug string) (*model.Ingredient, error) {
 	decodeErr := result.Decode(&ingredient)
 	return &ingredient, decodeErr
 }
+
+func (is *IngredientService) Count(keyword *string) (int64, error) {
+	_, collection := shared.Init("Ingredients")
+	filter := bson.D{{Key: "deleted", Value: false}}
+	if keyword != nil {
+		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: keyword}}})
+	}
+	total, err := collection.CountDocuments(context.TODO(), filter)
+	if err != nil {
+		return 0, err
+	}
+
+	return total, err
+}
