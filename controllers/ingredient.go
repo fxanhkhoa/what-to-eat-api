@@ -52,12 +52,12 @@ func (ic *IngredientController) Find(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
 		return
 	}
-	decoded, err := json.Marshal(ingredients)
+	count, err := service.NewIngredientService().Count(keyword)
 	if err != nil {
 		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
 		return
 	}
-	w.Write(decoded)
+	w.Write(helper.NewPaginationHelper().PaginationJson(ingredients, count))
 }
 
 func (ic *IngredientController) FindOne(w http.ResponseWriter, r *http.Request) {
