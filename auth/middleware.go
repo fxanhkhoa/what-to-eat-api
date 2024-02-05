@@ -44,6 +44,7 @@ func Middleware() func(http.Handler) http.Handler {
 			if err != nil {
 				log.Println(err.Error())
 				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
 			} else if claims, ok := token.Claims.(*service.CustomClaim); ok {
 				user, err := service.NewUserService().FindByID(claims.ID)
 
