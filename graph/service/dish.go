@@ -176,3 +176,17 @@ func (ds *DishService) FindOne(slug string) (*model.Dish, error) {
 	decodeErr := result.Decode(&dish)
 	return &dish, decodeErr
 }
+
+func (ds *DishService) Count(keyword *string) (int64, error) {
+	_, collection := shared.Init("Dishes")
+	filter := bson.D{{Key: "deleted", Value: false}}
+	if keyword != nil {
+		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: keyword}}})
+	}
+	total, err := collection.CountDocuments(context.TODO(), filter)
+	if err != nil {
+		return 0, err
+	}
+
+	return total, err
+}
