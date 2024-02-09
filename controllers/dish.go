@@ -52,12 +52,12 @@ func (dc *DishController) Find(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
 		return
 	}
-	decoded, err := json.Marshal(dishes)
+	count, err := service.NewDishService().Count(keyword)
 	if err != nil {
 		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
 		return
 	}
-	w.Write(decoded)
+	w.Write(helper.NewPaginationHelper().PaginationJson(dishes, count))
 }
 
 func (dc *DishController) FindOne(w http.ResponseWriter, r *http.Request) {
