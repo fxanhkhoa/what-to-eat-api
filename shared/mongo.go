@@ -41,7 +41,7 @@ func indexUserCollection() {
 	}
 
 	uniqueIDIndexModel := mongo.IndexModel{
-		Keys:    bson.D{{Key: "email", Value: -1}, {Key: "googleID", Value: -1}},
+		Keys:    bson.D{{Key: "email", Value: 1}, {Key: "googleID", Value: 1}},
 		Options: options.Index().SetUnique(true),
 	}
 
@@ -83,9 +83,15 @@ func indexIngredientCollection() {
 		Options: options.Index().SetDefaultLanguage("en"),
 	}
 
+	uniqueSlug := mongo.IndexModel{
+		Keys:    bson.D{{Key: "slug", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+
 	collection := Client.Database(DatabaseName).Collection("Ingredients")
 	name, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		indexModel,
+		uniqueSlug,
 	})
 
 	if err != nil {
@@ -102,9 +108,15 @@ func indexDishCollection() {
 		Options: options.Index().SetDefaultLanguage("en"),
 	}
 
+	uniqueSlug := mongo.IndexModel{
+		Keys:    bson.D{{Key: "slug", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+
 	collection := Client.Database(DatabaseName).Collection("Dishes")
 	name, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		indexModel,
+		uniqueSlug,
 	})
 
 	if err != nil {

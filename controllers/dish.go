@@ -74,3 +74,30 @@ func (dc *DishController) FindOne(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Write(decoded)
 }
+
+func (dc *DishController) FindRandom(w http.ResponseWriter, r *http.Request) {
+	limitStr := r.URL.Query().Get("limit")
+	if limitStr == "" {
+		limitStr = "10"
+	}
+
+	limit, errLimit := strconv.Atoi(limitStr)
+	if errLimit != nil {
+		http.Error(w, helper.NewResponseHelper().ErrorJson(errLimit.Error()), http.StatusBadRequest)
+		return
+	}
+
+	dishes, err := service.NewDishService().Random(&limit)
+	if err != nil {
+		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	decoded, err := json.Marshal(dishes)
+	if err != nil {
+		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(decoded)
+}
