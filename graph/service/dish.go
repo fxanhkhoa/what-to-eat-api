@@ -190,3 +190,21 @@ func (ds *DishService) Count(keyword *string) (int64, error) {
 
 	return total, err
 }
+
+func (ds *DishService) Random(limit *int) ([]*model.Dish, error) {
+	_, collection := shared.Init("Dishes")
+	stages := []bson.D{}
+	stages = append(stages, bson.D{{Key: "$match", Value: bson.D{{Key: "deleted", Value: false}}}})
+	stages = append(stages, bson.D{{Key: "$sample", Value: bson.D{{Key: "size", Value: int64(*limit)}}}})
+	cursor, err := collection.Aggregate(context.TODO(), stages)
+	if err != nil {
+		return nil, err
+	}
+
+	var dishes []*model.Dish
+	if err = cursor.All(context.TODO(), &dishes); err != nil {
+		log.Println(err)
+	}
+	defer cursor.Close(context.TODO())
+	return dishes, err
+}

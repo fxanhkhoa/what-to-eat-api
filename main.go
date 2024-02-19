@@ -38,6 +38,7 @@ func main() {
 
 	dishRouter := router.PathPrefix("/dish").Subrouter()
 	dishRouter.HandleFunc("/", controllers.NewDishController().Find).Methods("GET")
+	dishRouter.HandleFunc("/random", controllers.NewDishController().FindRandom).Methods("GET")
 	dishRouter.HandleFunc("/{slug}", controllers.NewDishController().FindOne).Methods("GET")
 
 	ingredientRouter := router.PathPrefix("/ingredient").Subrouter()
