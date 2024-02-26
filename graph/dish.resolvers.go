@@ -34,7 +34,7 @@ func (r *mutationResolver) RemoveDish(ctx context.Context, slug string) (*model.
 
 // Dishes is the resolver for the dishes field.
 func (r *queryResolver) Dishes(ctx context.Context, keyword *string, page *int, limit *int) ([]*model.Dish, error) {
-	dishes, err := service.NewDishService().Find(keyword, page, limit)
+	dishes, err := service.NewDishService().Find(keyword, page, limit, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	return dishes, err
 }
 

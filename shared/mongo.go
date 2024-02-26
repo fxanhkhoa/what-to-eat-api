@@ -113,10 +113,15 @@ func indexDishCollection() {
 		Options: options.Index().SetUnique(true),
 	}
 
+	tagsIndex := mongo.IndexModel{
+		Keys: bson.D{{Key: "tags", Value: 1}},
+	}
+
 	collection := Client.Database(DatabaseName).Collection("Dishes")
 	name, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		indexModel,
 		uniqueSlug,
+		tagsIndex,
 	})
 
 	if err != nil {
