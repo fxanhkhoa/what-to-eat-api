@@ -146,12 +146,45 @@ func (ds *DishService) Remove(slug string, profile *model.User) (*model.Dish, er
 	return &dish, decodeErr
 }
 
-func (ds *DishService) Find(keyword *string, page *int, limit *int) ([]*model.Dish, error) {
+func (ds *DishService) Find(
+	keyword *string,
+	page *int,
+	limit *int,
+	tags *[]string,
+	preparationTimeFrom *int,
+	preparationTimeTo *int,
+	cookingTimeFrom *int,
+	cookingTimeTo *int,
+	difficultLevels *[]string,
+	mealCategories *[]string,
+	ingredientCategories *[]string,
+	ingredients *[]string) ([]*model.Dish, error) {
 	_, collection := shared.Init("Dishes")
 	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(*page) - 1) * int64(*limit)).SetLimit(int64(*limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
 	if keyword != nil {
 		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: keyword}}})
+	}
+	if tags != nil && len(*tags) > 0 {
+		filter = append(filter, bson.E{Key: "tags", Value: bson.D{{Key: "$in", Value: tags}}})
+	}
+	if preparationTimeFrom != nil && preparationTimeTo != nil {
+		filter = append(filter, bson.E{Key: "preparationTime", Value: bson.D{{Key: "$lte", Value: preparationTimeTo}, {Key: "$gte", Value: preparationTimeFrom}}})
+	}
+	if cookingTimeFrom != nil && cookingTimeTo != nil {
+		filter = append(filter, bson.E{Key: "cookingTime", Value: bson.D{{Key: "$lte", Value: cookingTimeTo}, {Key: "$gte", Value: cookingTimeFrom}}})
+	}
+	if difficultLevels != nil && len(*difficultLevels) > 0 {
+		filter = append(filter, bson.E{Key: "difficultLevel", Value: bson.D{{Key: "$in", Value: difficultLevels}}})
+	}
+	if mealCategories != nil && len(*mealCategories) > 0 {
+		filter = append(filter, bson.E{Key: "mealCategories", Value: bson.D{{Key: "$in", Value: mealCategories}}})
+	}
+	if ingredientCategories != nil && len(*ingredientCategories) > 0 {
+		filter = append(filter, bson.E{Key: "ingredientCategories", Value: bson.D{{Key: "$in", Value: ingredientCategories}}})
+	}
+	if ingredients != nil && len(*ingredients) > 0 {
+		filter = append(filter, bson.E{Key: "ingredients.slug", Value: bson.D{{Key: "$in", Value: ingredients}}})
 	}
 	cursor, err := collection.Find(context.TODO(), filter, opts)
 	if err != nil {
@@ -177,11 +210,42 @@ func (ds *DishService) FindOne(slug string) (*model.Dish, error) {
 	return &dish, decodeErr
 }
 
-func (ds *DishService) Count(keyword *string) (int64, error) {
+func (ds *DishService) Count(
+	keyword *string,
+	tags *[]string,
+	preparationTimeFrom *int,
+	preparationTimeTo *int,
+	cookingTimeFrom *int,
+	cookingTimeTo *int,
+	difficultLevels *[]string,
+	mealCategories *[]string,
+	ingredientCategories *[]string,
+	ingredients *[]string) (int64, error) {
 	_, collection := shared.Init("Dishes")
 	filter := bson.D{{Key: "deleted", Value: false}}
 	if keyword != nil {
 		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: keyword}}})
+	}
+	if tags != nil && len(*tags) > 0 {
+		filter = append(filter, bson.E{Key: "tags", Value: bson.D{{Key: "$in", Value: tags}}})
+	}
+	if preparationTimeFrom != nil && preparationTimeTo != nil {
+		filter = append(filter, bson.E{Key: "preparationTime", Value: bson.D{{Key: "$lte", Value: preparationTimeTo}, {Key: "$gte", Value: preparationTimeFrom}}})
+	}
+	if cookingTimeFrom != nil && cookingTimeTo != nil {
+		filter = append(filter, bson.E{Key: "cookingTime", Value: bson.D{{Key: "$lte", Value: cookingTimeTo}, {Key: "$gte", Value: cookingTimeFrom}}})
+	}
+	if difficultLevels != nil && len(*difficultLevels) > 0 {
+		filter = append(filter, bson.E{Key: "difficultLevel", Value: bson.D{{Key: "$in", Value: difficultLevels}}})
+	}
+	if mealCategories != nil && len(*mealCategories) > 0 {
+		filter = append(filter, bson.E{Key: "mealCategories", Value: bson.D{{Key: "$in", Value: mealCategories}}})
+	}
+	if ingredientCategories != nil && len(*ingredientCategories) > 0 {
+		filter = append(filter, bson.E{Key: "ingredientCategories", Value: bson.D{{Key: "$in", Value: ingredientCategories}}})
+	}
+	if ingredients != nil && len(*ingredients) > 0 {
+		filter = append(filter, bson.E{Key: "ingredients.slug", Value: bson.D{{Key: "$in", Value: ingredients}}})
 	}
 	total, err := collection.CountDocuments(context.TODO(), filter)
 	if err != nil {
