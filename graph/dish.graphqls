@@ -80,7 +80,20 @@ input UpdateDishInput {
 }
 
 extend type Query {
-	dishes(keyword: String, page: Int = 1, limit: Int = 10): [Dish]! @hasRole(role: FIND_DISHES)
+	dishes(
+		keyword: String
+		page: Int = 1
+		limit: Int = 10
+		tags: String
+		preparationTimeFrom: Int
+		preparationTimeTo: Int
+		cookingTimeFrom: Int
+		cookingTimeTo: Int
+		difficultLevels: String
+		mealCategories: String
+		ingredientCategories: String
+		ingredients: String
+	): [Dish]! @hasRole(role: FIND_DISHES)
 	dish(slug: String!): Dish @hasRole(role: FIND_DISH)
 }
 

@@ -6,6 +6,7 @@ package graph
 
 import (
 	"context"
+	"strings"
 	"what-to-eat/be/auth"
 	"what-to-eat/be/graph/model"
 	"what-to-eat/be/graph/service"
@@ -33,8 +34,59 @@ func (r *mutationResolver) RemoveDish(ctx context.Context, slug string) (*model.
 }
 
 // Dishes is the resolver for the dishes field.
-func (r *queryResolver) Dishes(ctx context.Context, keyword *string, page *int, limit *int) ([]*model.Dish, error) {
-	dishes, err := service.NewDishService().Find(keyword, page, limit, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+func (r *queryResolver) Dishes(
+	ctx context.Context,
+	keyword *string,
+	page *int,
+	limit *int,
+	tags *string,
+	preparationTimeFrom *int,
+	preparationTimeTo *int,
+	cookingTimeFrom *int,
+	cookingTimeTo *int,
+	difficultLevels *string,
+	mealCategories *string,
+	ingredientCategories *string,
+	ingredients *string) ([]*model.Dish, error) {
+
+	inputTags := []string{}
+	if tags != nil {
+		inputTags = strings.Split(*tags, ",")
+	}
+
+	inputDifficultLevels := []string{}
+	if difficultLevels != nil {
+		inputDifficultLevels = strings.Split(*difficultLevels, ",")
+	}
+
+	inputMealCategories := []string{}
+	if mealCategories != nil {
+		inputMealCategories = strings.Split(*mealCategories, ",")
+	}
+
+	inputIngredientCategories := []string{}
+	if ingredientCategories != nil {
+		inputIngredientCategories = strings.Split(*ingredientCategories, ",")
+	}
+
+	inputIngredients := []string{}
+	if ingredients != nil {
+		inputIngredients = strings.Split(*ingredients, ",")
+	}
+
+	dishes, err := service.NewDishService().Find(
+		keyword,
+		page,
+		limit,
+		&inputTags,
+		preparationTimeFrom,
+		preparationTimeTo,
+		cookingTimeFrom,
+		cookingTimeTo,
+		&inputDifficultLevels,
+		&inputMealCategories,
+		&inputIngredientCategories,
+		&inputIngredients)
 	return dishes, err
 }
 
