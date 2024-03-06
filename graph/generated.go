@@ -135,7 +135,7 @@ type ComplexityRoot struct {
 	Query struct {
 		AllPermissions       func(childComplexity int, limit *int) int
 		Dish                 func(childComplexity int, slug string) int
-		Dishes               func(childComplexity int, keyword *string, page *int, limit *int) int
+		Dishes               func(childComplexity int, keyword *string, page *int, limit *int, tags *string, preparationTimeFrom *int, preparationTimeTo *int, cookingTimeFrom *int, cookingTimeTo *int, difficultLevels *string, mealCategories *string, ingredientCategories *string, ingredients *string) int
 		Ingredient           func(childComplexity int, slug string) int
 		Ingredients          func(childComplexity int, keyword *string, page *int, limit *int) int
 		RolePermission       func(childComplexity int, id string) int
@@ -209,7 +209,7 @@ type QueryResolver interface {
 	Users(ctx context.Context, keyword *string, page *int, limit *int) ([]*model.User, error)
 	User(ctx context.Context, id string) (*model.User, error)
 	UserByEmail(ctx context.Context, email string) (*model.User, error)
-	Dishes(ctx context.Context, keyword *string, page *int, limit *int) ([]*model.Dish, error)
+	Dishes(ctx context.Context, keyword *string, page *int, limit *int, tags *string, preparationTimeFrom *int, preparationTimeTo *int, cookingTimeFrom *int, cookingTimeTo *int, difficultLevels *string, mealCategories *string, ingredientCategories *string, ingredients *string) ([]*model.Dish, error)
 	Dish(ctx context.Context, slug string) (*model.Dish, error)
 	Ingredients(ctx context.Context, keyword *string, page *int, limit *int) ([]*model.Ingredient, error)
 	Ingredient(ctx context.Context, slug string) (*model.Ingredient, error)
@@ -795,7 +795,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Dishes(childComplexity, args["keyword"].(*string), args["page"].(*int), args["limit"].(*int)), true
+		return e.complexity.Query.Dishes(childComplexity, args["keyword"].(*string), args["page"].(*int), args["limit"].(*int), args["tags"].(*string), args["preparationTimeFrom"].(*int), args["preparationTimeTo"].(*int), args["cookingTimeFrom"].(*int), args["cookingTimeTo"].(*int), args["difficultLevels"].(*string), args["mealCategories"].(*string), args["ingredientCategories"].(*string), args["ingredients"].(*string)), true
 
 	case "Query.ingredient":
 		if e.complexity.Query.Ingredient == nil {
@@ -1590,6 +1590,87 @@ func (ec *executionContext) field_Query_dishes_args(ctx context.Context, rawArgs
 		}
 	}
 	args["limit"] = arg2
+	var arg3 *string
+	if tmp, ok := rawArgs["tags"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tags"))
+		arg3, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["tags"] = arg3
+	var arg4 *int
+	if tmp, ok := rawArgs["preparationTimeFrom"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("preparationTimeFrom"))
+		arg4, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["preparationTimeFrom"] = arg4
+	var arg5 *int
+	if tmp, ok := rawArgs["preparationTimeTo"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("preparationTimeTo"))
+		arg5, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["preparationTimeTo"] = arg5
+	var arg6 *int
+	if tmp, ok := rawArgs["cookingTimeFrom"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("cookingTimeFrom"))
+		arg6, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["cookingTimeFrom"] = arg6
+	var arg7 *int
+	if tmp, ok := rawArgs["cookingTimeTo"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("cookingTimeTo"))
+		arg7, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["cookingTimeTo"] = arg7
+	var arg8 *string
+	if tmp, ok := rawArgs["difficultLevels"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("difficultLevels"))
+		arg8, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["difficultLevels"] = arg8
+	var arg9 *string
+	if tmp, ok := rawArgs["mealCategories"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mealCategories"))
+		arg9, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["mealCategories"] = arg9
+	var arg10 *string
+	if tmp, ok := rawArgs["ingredientCategories"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ingredientCategories"))
+		arg10, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["ingredientCategories"] = arg10
+	var arg11 *string
+	if tmp, ok := rawArgs["ingredients"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ingredients"))
+		arg11, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["ingredients"] = arg11
 	return args, nil
 }
 
@@ -5922,7 +6003,7 @@ func (ec *executionContext) _Query_dishes(ctx context.Context, field graphql.Col
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Dishes(rctx, fc.Args["keyword"].(*string), fc.Args["page"].(*int), fc.Args["limit"].(*int))
+			return ec.resolvers.Query().Dishes(rctx, fc.Args["keyword"].(*string), fc.Args["page"].(*int), fc.Args["limit"].(*int), fc.Args["tags"].(*string), fc.Args["preparationTimeFrom"].(*int), fc.Args["preparationTimeTo"].(*int), fc.Args["cookingTimeFrom"].(*int), fc.Args["cookingTimeTo"].(*int), fc.Args["difficultLevels"].(*string), fc.Args["mealCategories"].(*string), fc.Args["ingredientCategories"].(*string), fc.Args["ingredients"].(*string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			role, err := ec.unmarshalNRole2whatᚑtoᚑeatᚋbeᚋgraphᚋmodelᚐRole(ctx, "FIND_DISHES")
