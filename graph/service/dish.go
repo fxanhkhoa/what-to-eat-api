@@ -18,7 +18,7 @@ func NewDishService() *DishService {
 }
 
 func (ds *DishService) Create(createDishInput model.CreateDishInput, profile *model.User) (*model.Dish, error) {
-	_, collection := shared.Init("Dishes")
+	collection := shared.Init("Dishes")
 
 	var title []*model.MultiLanguageD
 	for _, element := range createDishInput.Title {
@@ -75,7 +75,7 @@ func (ds *DishService) Create(createDishInput model.CreateDishInput, profile *mo
 }
 
 func (ds *DishService) Update(updateDishInput model.UpdateDishInput, profile *model.User) (*model.Dish, error) {
-	_, collection := shared.Init("Dishes")
+	collection := shared.Init("Dishes")
 
 	var title []*model.MultiLanguageD
 	for _, element := range updateDishInput.Title {
@@ -129,7 +129,7 @@ func (ds *DishService) Update(updateDishInput model.UpdateDishInput, profile *mo
 }
 
 func (ds *DishService) Remove(slug string, profile *model.User) (*model.Dish, error) {
-	_, collection := shared.Init("Dishes")
+	collection := shared.Init("Dishes")
 	now := time.Now()
 	filter := bson.M{"slug": slug, "deleted": false}
 	options := options.FindOneAndUpdate().SetReturnDocument(options.After)
@@ -159,7 +159,7 @@ func (ds *DishService) Find(
 	mealCategories *[]string,
 	ingredientCategories *[]string,
 	ingredients *[]string) ([]*model.Dish, error) {
-	_, collection := shared.Init("Dishes")
+	collection := shared.Init("Dishes")
 	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(*page) - 1) * int64(*limit)).SetLimit(int64(*limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
 	if keyword != nil {
@@ -199,7 +199,7 @@ func (ds *DishService) Find(
 }
 
 func (ds *DishService) FindOne(slug string) (*model.Dish, error) {
-	_, collection := shared.Init("Dishes")
+	collection := shared.Init("Dishes")
 	filter := bson.M{"slug": slug}
 	result := collection.FindOne(context.TODO(), filter)
 	if result.Err() != nil {
@@ -221,7 +221,7 @@ func (ds *DishService) Count(
 	mealCategories *[]string,
 	ingredientCategories *[]string,
 	ingredients *[]string) (int64, error) {
-	_, collection := shared.Init("Dishes")
+	collection := shared.Init("Dishes")
 	filter := bson.D{{Key: "deleted", Value: false}}
 	if keyword != nil {
 		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: keyword}}})
@@ -256,7 +256,7 @@ func (ds *DishService) Count(
 }
 
 func (ds *DishService) Random(limit *int) ([]*model.Dish, error) {
-	_, collection := shared.Init("Dishes")
+	collection := shared.Init("Dishes")
 	stages := []bson.D{}
 	stages = append(stages, bson.D{{Key: "$match", Value: bson.D{{Key: "deleted", Value: false}}}})
 	stages = append(stages, bson.D{{Key: "$sample", Value: bson.D{{Key: "size", Value: int64(*limit)}}}})
