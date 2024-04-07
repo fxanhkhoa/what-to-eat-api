@@ -19,7 +19,7 @@ func NewRolePermissionService() *RolePermissionService {
 }
 
 func (r *RolePermissionService) Create(input model.CreateRolePermissionInput, profile *model.User) (*model.RolePermission, error) {
-	_, collection := shared.Init("RolePermissions")
+	collection := shared.Init("RolePermissions")
 	now := time.Now()
 
 	rolePermission := model.RolePermission{
@@ -44,7 +44,7 @@ func (r *RolePermissionService) Create(input model.CreateRolePermissionInput, pr
 }
 
 func (r *RolePermissionService) Update(input model.UpdateRolePermissionInput, profile *model.User) (*model.RolePermission, error) {
-	_, collection := shared.Init("RolePermissions")
+	collection := shared.Init("RolePermissions")
 	now := time.Now()
 
 	rolePermission := model.RolePermission{
@@ -70,7 +70,7 @@ func (r *RolePermissionService) Update(input model.UpdateRolePermissionInput, pr
 }
 
 func (r *RolePermissionService) FindOne(id string) (*model.RolePermission, error) {
-	_, collection := shared.Init("RolePermissions")
+	collection := shared.Init("RolePermissions")
 	var rolePermission model.RolePermission
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -86,7 +86,7 @@ func (r *RolePermissionService) FindOne(id string) (*model.RolePermission, error
 }
 
 func (r *RolePermissionService) Find(page *int, limit *int) ([]*model.RolePermission, error) {
-	_, collection := shared.Init("RolePermissions")
+	collection := shared.Init("RolePermissions")
 	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(*page) - 1) * int64(*limit)).SetLimit(int64(*limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
 	cursor, err := collection.Find(context.TODO(), filter, opts)
@@ -102,7 +102,7 @@ func (r *RolePermissionService) Find(page *int, limit *int) ([]*model.RolePermis
 }
 
 func (r *RolePermissionService) Remove(id string, profile *model.User) (*model.RolePermission, error) {
-	_, collection := shared.Init("RolePermissions")
+	collection := shared.Init("RolePermissions")
 	now := time.Now()
 	var rolePermission model.RolePermission
 	objectID, err := primitive.ObjectIDFromHex(id)
@@ -127,7 +127,7 @@ func (r *RolePermissionService) Remove(id string, profile *model.User) (*model.R
 }
 
 func (r *RolePermissionService) FindByName(name string) (*model.RolePermission, error) {
-	_, collection := shared.Init("RolePermissions")
+	collection := shared.Init("RolePermissions")
 	var rolePermission model.RolePermission
 	filter := bson.M{"name": name, "deleted": false}
 	result := collection.FindOne(context.TODO(), filter)

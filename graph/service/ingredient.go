@@ -18,7 +18,7 @@ func NewIngredientService() *IngredientService {
 }
 
 func (is *IngredientService) Create(createIngredientInput model.CreateIngredientInput, profile *model.User) (*model.Ingredient, error) {
-	_, collection := shared.Init("Ingredients")
+	collection := shared.Init("Ingredients")
 	var title []*model.MultiLanguage
 	for _, element := range createIngredientInput.Title {
 		title = append(title, &model.MultiLanguage{Lang: element.Lang, Data: element.Data})
@@ -54,7 +54,7 @@ func (is *IngredientService) Create(createIngredientInput model.CreateIngredient
 }
 
 func (is *IngredientService) Update(updateIngredientInput model.UpdateIngredientInput, profile *model.User) (*model.Ingredient, error) {
-	_, collection := shared.Init("Ingredients")
+	collection := shared.Init("Ingredients")
 	var title []*model.MultiLanguage
 	for _, element := range updateIngredientInput.Title {
 		title = append(title, &model.MultiLanguage{Lang: element.Lang, Data: element.Data})
@@ -87,7 +87,7 @@ func (is *IngredientService) Update(updateIngredientInput model.UpdateIngredient
 }
 
 func (is *IngredientService) Remove(slug string, profile *model.User) (*model.Ingredient, error) {
-	_, collection := shared.Init("Ingredients")
+	collection := shared.Init("Ingredients")
 	now := time.Now()
 	filter := bson.M{"slug": slug, "deleted": false}
 	options := options.FindOneAndUpdate().SetReturnDocument(options.After)
@@ -105,7 +105,7 @@ func (is *IngredientService) Remove(slug string, profile *model.User) (*model.In
 }
 
 func (is *IngredientService) Find(keyword *string, page *int, limit *int) ([]*model.Ingredient, error) {
-	_, collection := shared.Init("Ingredients")
+	collection := shared.Init("Ingredients")
 	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(*page) - 1) * int64(*limit)).SetLimit(int64(*limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
 	if keyword != nil {
@@ -124,7 +124,7 @@ func (is *IngredientService) Find(keyword *string, page *int, limit *int) ([]*mo
 }
 
 func (is *IngredientService) FindOne(slug string) (*model.Ingredient, error) {
-	_, collection := shared.Init("Ingredients")
+	collection := shared.Init("Ingredients")
 	filter := bson.M{"slug": slug}
 	result := collection.FindOne(context.TODO(), filter)
 	if result.Err() != nil {
@@ -136,7 +136,7 @@ func (is *IngredientService) FindOne(slug string) (*model.Ingredient, error) {
 }
 
 func (is *IngredientService) Count(keyword *string) (int64, error) {
-	_, collection := shared.Init("Ingredients")
+	collection := shared.Init("Ingredients")
 	filter := bson.D{{Key: "deleted", Value: false}}
 	if keyword != nil {
 		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: keyword}}})
