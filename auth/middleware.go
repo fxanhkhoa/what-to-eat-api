@@ -1,7 +1,10 @@
 package auth
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -23,10 +26,30 @@ type CustomClaims struct {
 	jwt.RegisteredClaims
 }
 
+type BodyStructGql struct {
+	OperationName string `json:"operationName"`
+	Query         string `json:"query"`
+}
+
 func Middleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			secretKey := os.Getenv("SECRET_KEY")
+
+			data, _ := io.ReadAll(r.Body)
+			r.Body = io.NopCloser(bytes.NewReader(data))
+			var t BodyStructGql
+			err := json.Unmarshal(data, &t)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			if t.OperationName == "IntrospectionQuery" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			header := r.Header.Get("Authorization")
 
 			// Allow unauthenticated users in

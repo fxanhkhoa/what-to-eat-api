@@ -45,6 +45,11 @@ func main() {
 	ingredientRouter.HandleFunc("/", controllers.NewIngredientController().Find).Methods("GET")
 	ingredientRouter.HandleFunc("/{slug}", controllers.NewIngredientController().FindOne).Methods("GET")
 
+	dishVoteRouter := router.PathPrefix("/dish-vote").Subrouter()
+	dishVoteRouter.HandleFunc("/", controllers.NewDishVoteController().Create).Methods("POST")
+	dishVoteRouter.HandleFunc("/{id}", controllers.NewDishVoteController().Update).Methods("PATCH")
+	dishVoteRouter.HandleFunc("/{id}", controllers.NewDishVoteController().FindOne).Methods("GET")
+
 	authRouter := router.Methods(http.MethodPost, http.MethodGet).Subrouter()
 	authRouter.HandleFunc("/login", auth.NewAuthController().Login)
 	authRouter.HandleFunc("/retrieve-token", auth.NewAuthController().RetrieveToken)

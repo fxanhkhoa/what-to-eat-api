@@ -26,6 +26,12 @@ enum Role {
     DELETE_DISH
     FIND_DISHES
     FIND_DISH
+
+    CREATE_DISH_VOTE
+    UPDATE_DISH_VOTE
+    DELETE_DISH_VOTE
+    FIND_DISH_VOTES
+    FIND_DISH_VOTE
 }
 
 directive @Auth(index: Int) on FIELD_DEFINITION
