@@ -26,7 +26,11 @@ func (dvs *DishVoteService) Create(createDishVoteInput model.CreateDishVoteInput
 
 	var dishVoteItems []*model.DishVoteItem
 	for _, element := range createDishVoteInput.DishVoteItems {
-		dishVoteItems = append(dishVoteItems, &model.DishVoteItem{Slug: element.Slug, VoteUser: element.VoteUser, VoteAnonymous: element.VoteAnonymous})
+		dishVoteItems = append(dishVoteItems, &model.DishVoteItem{
+			Slug:          element.Slug,
+			VoteUser:      element.VoteUser,
+			VoteAnonymous: element.VoteAnonymous,
+			IsCustom:      element.IsCustom})
 	}
 
 	dishVote := model.DishVote{
@@ -52,7 +56,11 @@ func (dvs *DishVoteService) Update(updateDishVoteInput model.UpdateDishVoteInput
 
 	var dishVoteItems []*model.DishVoteItem
 	for _, element := range updateDishVoteInput.DishVoteItems {
-		dishVoteItems = append(dishVoteItems, &model.DishVoteItem{Slug: element.Slug, VoteUser: element.VoteUser, VoteAnonymous: element.VoteAnonymous})
+		dishVoteItems = append(dishVoteItems, &model.DishVoteItem{
+			Slug:          element.Slug,
+			VoteUser:      element.VoteUser,
+			VoteAnonymous: element.VoteAnonymous,
+			IsCustom:      element.IsCustom})
 	}
 
 	now := time.Now()
