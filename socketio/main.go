@@ -1,25 +1,37 @@
 package socketio_helper
 
 import (
+	"encoding/json"
 	"fmt"
 
-	socketio "github.com/googollee/go-socket.io"
+	"github.com/zishang520/socket.io/socket"
 )
 
-func InitializeSocketIO() {
-	server := socketio.NewServer(nil)
+func InitializeSocketIO() *socket.Server {
+	io := socket.NewServer(nil, nil)
 
-	server.OnConnect("/", func(s socketio.Conn) error {
-		s.SetContext("")
-		fmt.Println("connected:", s.ID())
-		return nil
+	io.On("connection", func(clients ...any) {
+		client := clients[0].(*socket.Socket)
+		client.On("join-room", func(datas ...any) {
+			jsonStr, err := json.Marshal(datas[0])
+			if err != nil {
+				fmt.Println(err)
+			}
+			var socketioJoinRoomData SocketioJoinRoom
+			if err := json.Unmarshal(jsonStr, &socketioJoinRoomData); err != nil {
+				fmt.Println(err)
+			}
+
+			client.Join(socket.Room(socketioJoinRoomData.RoomID))
+		})
+		client.On("dish-vote-update", func(data ...any) {
+			updated, socketioJoinRoomData := ProcessDishVoteUpdate(data...)
+
+			io.To(socket.Room(socketioJoinRoomData.RoomID)).Emit("dish-vote-update-client", updated)
+		})
+		client.On("disconnect", func(...any) {
+		})
 	})
 
-	server.OnEvent("/", "join-room", func(s socketio.Conn, msg string) {
-
-	})
-
-	server.OnEvent("/", "chat", func(s socketio.Conn, msg string) {
-
-	})
+	return io
 }

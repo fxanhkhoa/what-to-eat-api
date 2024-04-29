@@ -111,14 +111,16 @@ type DishVoteInsertOneResult struct {
 
 type DishVoteItem struct {
 	Slug          string    `json:"slug" bson:"slug"`
-	VoteUser      []*string `json:"voteUser,omitempty" bson:"voteUser"`
-	VoteAnonymous []*string `json:"voteAnonymous,omitempty" bson:"voteAnonymous"`
+	VoteUser      []*string `json:"voteUser" bson:"voteUser"`
+	VoteAnonymous []*string `json:"voteAnonymous" bson:"voteAnonymous"`
+	IsCustom      bool      `json:"isCustom" bson:"isCustom"`
 }
 
 type DishVoteItemInput struct {
 	Slug          string    `json:"slug" bson:"slug"`
-	VoteUser      []*string `json:"voteUser,omitempty" bson:"voteUser"`
-	VoteAnonymous []*string `json:"voteAnonymous,omitempty" bson:"voteAnonymous"`
+	VoteUser      []*string `json:"voteUser" bson:"voteUser"`
+	VoteAnonymous []*string `json:"voteAnonymous" bson:"voteAnonymous"`
+	IsCustom      bool      `json:"isCustom" bson:"isCustom"`
 }
 
 type Ingredient struct {

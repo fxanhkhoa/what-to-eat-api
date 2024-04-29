@@ -1,7 +1,8 @@
 type DishVoteItem {
 	slug: String!
-	voteUser: [String]
-	voteAnonymous: [String]
+	voteUser: [String]!
+	voteAnonymous: [String]!
+	isCustom: Boolean!
 }
 
 type DishVote {
@@ -20,8 +21,9 @@ type DishVote {
 
 input DishVoteItemInput {
 	slug: String!
-	voteUser: [String]
-	voteAnonymous: [String]
+	voteUser: [String]!
+	voteAnonymous: [String]!
+	isCustom: Boolean!
 }
 
 input CreateDishVoteInput {
