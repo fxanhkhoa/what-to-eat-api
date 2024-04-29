@@ -26,6 +26,12 @@ type CreateDishInput struct {
 	RelatedDishes        []*string                 `json:"relatedDishes" bson:"relatedDishes"`
 }
 
+type CreateDishVoteInput struct {
+	Title         *string              `json:"title,omitempty" bson:"title"`
+	Description   *string              `json:"description,omitempty" bson:"description"`
+	DishVoteItems []*DishVoteItemInput `json:"dishVoteItems" bson:"dishVoteItems"`
+}
+
 type CreateIngredientInput struct {
 	Slug               string                `json:"slug" bson:"slug"`
 	Title              []*MultiLanguageInput `json:"title" bson:"title"`
@@ -83,6 +89,38 @@ type Dish struct {
 	CreatedAt            *time.Time           `json:"createdAt,omitempty" bson:"createdAt"`
 	CreatedBy            *string              `json:"createdBy,omitempty" bson:"createdBy"`
 	ID                   string               `json:"_id" bson:"_id,omitempty"`
+}
+
+type DishVote struct {
+	Title         *string         `json:"title,omitempty" bson:"title"`
+	Description   *string         `json:"description,omitempty" bson:"description"`
+	DishVoteItems []*DishVoteItem `json:"dishVoteItems" bson:"dishVoteItems"`
+	Deleted       bool            `json:"deleted" bson:"deleted"`
+	DeletedAt     *time.Time      `json:"deletedAt,omitempty" bson:"deletedAt"`
+	DeletedBy     *string         `json:"deletedBy,omitempty" bson:"deletedBy"`
+	UpdatedAt     *time.Time      `json:"updatedAt,omitempty" bson:"updatedAt"`
+	UpdatedBy     *string         `json:"updatedBy,omitempty" bson:"updatedBy"`
+	CreatedAt     *time.Time      `json:"createdAt,omitempty" bson:"createdAt"`
+	CreatedBy     *string         `json:"createdBy,omitempty" bson:"createdBy"`
+	ID            string          `json:"_id" bson:"_id,omitempty"`
+}
+
+type DishVoteInsertOneResult struct {
+	InsertedID *string `json:"InsertedID,omitempty" bson:"InsertedID"`
+}
+
+type DishVoteItem struct {
+	Slug          string    `json:"slug" bson:"slug"`
+	VoteUser      []*string `json:"voteUser" bson:"voteUser"`
+	VoteAnonymous []*string `json:"voteAnonymous" bson:"voteAnonymous"`
+	IsCustom      bool      `json:"isCustom" bson:"isCustom"`
+}
+
+type DishVoteItemInput struct {
+	Slug          string    `json:"slug" bson:"slug"`
+	VoteUser      []*string `json:"voteUser" bson:"voteUser"`
+	VoteAnonymous []*string `json:"voteAnonymous" bson:"voteAnonymous"`
+	IsCustom      bool      `json:"isCustom" bson:"isCustom"`
 }
 
 type Ingredient struct {
@@ -144,6 +182,12 @@ type MultiLanguageD struct {
 	Data *string `json:"data,omitempty" bson:"data"`
 }
 
+type Mutation struct {
+}
+
+type Query struct {
+}
+
 type RetrieveTokenInput struct {
 	RefreshToken string `json:"refreshToken" bson:"refreshToken"`
 }
@@ -182,6 +226,13 @@ type UpdateDishInput struct {
 	Videos               []*string                 `json:"videos" bson:"videos"`
 	Ingredients          []*IngredientsInDishInput `json:"ingredients" bson:"ingredients"`
 	RelatedDishes        []*string                 `json:"relatedDishes" bson:"relatedDishes"`
+}
+
+type UpdateDishVoteInput struct {
+	ID            string               `json:"_id" bson:"_id,omitempty"`
+	Title         *string              `json:"title,omitempty" bson:"title"`
+	Description   *string              `json:"description,omitempty" bson:"description"`
+	DishVoteItems []*DishVoteItemInput `json:"dishVoteItems" bson:"dishVoteItems"`
 }
 
 type UpdateIngredientInput struct {
@@ -269,6 +320,11 @@ const (
 	RoleDeleteDish       Role = "DELETE_DISH"
 	RoleFindDishes       Role = "FIND_DISHES"
 	RoleFindDish         Role = "FIND_DISH"
+	RoleCreateDishVote   Role = "CREATE_DISH_VOTE"
+	RoleUpdateDishVote   Role = "UPDATE_DISH_VOTE"
+	RoleDeleteDishVote   Role = "DELETE_DISH_VOTE"
+	RoleFindDishVotes    Role = "FIND_DISH_VOTES"
+	RoleFindDishVote     Role = "FIND_DISH_VOTE"
 )
 
 var AllRole = []Role{
@@ -292,11 +348,16 @@ var AllRole = []Role{
 	RoleDeleteDish,
 	RoleFindDishes,
 	RoleFindDish,
+	RoleCreateDishVote,
+	RoleUpdateDishVote,
+	RoleDeleteDishVote,
+	RoleFindDishVotes,
+	RoleFindDishVote,
 }
 
 func (e Role) IsValid() bool {
 	switch e {
-	case RoleCreateUser, RoleUpdateUser, RoleDeleteUser, RoleFindUsers, RoleFindUser, RoleCreateRole, RoleUpdateRole, RoleDeleteRole, RoleFindRoles, RoleFindRole, RoleCreateIngredient, RoleUpdateIngredient, RoleDeleteIngredient, RoleFindIngredients, RoleFindIngredient, RoleCreateDish, RoleUpdateDish, RoleDeleteDish, RoleFindDishes, RoleFindDish:
+	case RoleCreateUser, RoleUpdateUser, RoleDeleteUser, RoleFindUsers, RoleFindUser, RoleCreateRole, RoleUpdateRole, RoleDeleteRole, RoleFindRoles, RoleFindRole, RoleCreateIngredient, RoleUpdateIngredient, RoleDeleteIngredient, RoleFindIngredients, RoleFindIngredient, RoleCreateDish, RoleUpdateDish, RoleDeleteDish, RoleFindDishes, RoleFindDish, RoleCreateDishVote, RoleUpdateDishVote, RoleDeleteDishVote, RoleFindDishVotes, RoleFindDishVote:
 		return true
 	}
 	return false
