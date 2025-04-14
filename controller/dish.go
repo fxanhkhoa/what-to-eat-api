@@ -1,12 +1,13 @@
-package controllers
+package controller
 
 import (
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
-	"what-to-eat/be/graph/service"
 	"what-to-eat/be/helper"
+	"what-to-eat/be/model"
+	"what-to-eat/be/service"
 
 	"github.com/gorilla/mux"
 	"github.com/labstack/echo/v4"
@@ -19,7 +20,7 @@ func NewDishController() *DishController {
 }
 
 func (dc *DishController) Find(c echo.Context) {
-	var query dto.QueryMemberDto
+	var query model.QueryDishDto
 
 	var err error
 	query.BaseDto.Page, err = strconv.Atoi(c.QueryParam("page"))
@@ -32,139 +33,94 @@ func (dc *DishController) Find(c echo.Context) {
 		query.BaseDto.Limit = 10
 	}
 
-	keywordStr := r.URL.Query().Get("keyword")
-	var keyword *string
-	if keywordStr == "" {
-		keyword = nil
-	} else {
-		keyword = &keywordStr
+	keyword := c.QueryParam("keyword")
+	if keyword != "" {
+		query.Keyword = &keyword
 	}
 
-	tagsStr := r.URL.Query().Get("tags")
-	var tags []string
-	if tagsStr == "" {
-		tags = []string{}
-	} else {
-		tags = strings.Split(tagsStr, ",")
+	tags := c.Request().URL.Query()["tags"]
+	if len(tags) > 0 {
+		query.Tags = &tags
 	}
 
-	preparationTimeFromStr := r.URL.Query().Get("preparationTimeFrom")
-	var preparationTimeFrom *int
-	if preparationTimeFromStr == "" {
-		preparationTimeFrom = nil
-	} else {
+	preparationTimeFromStr := c.QueryParam("preparationTimeFrom")
+	if preparationTimeFromStr != "" {
 		num, err := strconv.Atoi(preparationTimeFromStr)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
-		preparationTimeFrom = &num
+		query.PreparationTimeFrom = &num
 	}
 
-	preparationTimeToStr := r.URL.Query().Get("preparationTimeTo")
-	var preparationTimeTo *int
-	if preparationTimeToStr == "" {
-		preparationTimeTo = nil
-	} else {
+	preparationTimeToStr := c.QueryParam("preparationTimeTo")
+	if preparationTimeToStr != "" {
 		num, err := strconv.Atoi(preparationTimeToStr)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
-		preparationTimeTo = &num
+		query.PreparationTimeTo = &num
 	}
 
-	cookingTimeFromStr := r.URL.Query().Get("cookingTimeFrom")
-	var cookingTimeFrom *int
+	cookingTimeFromStr := c.QueryParam("cookingTimeFrom")
 	if cookingTimeFromStr == "" {
-		cookingTimeFrom = nil
-	} else {
 		num, err := strconv.Atoi(cookingTimeFromStr)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
-		cookingTimeFrom = &num
+		query.CookingTimeFrom = &num
 	}
 
-	cookingTimeToStr := r.URL.Query().Get("cookingTimeTo")
-	var cookingTimeTo *int
-	if cookingTimeToStr == "" {
-		cookingTimeTo = nil
-	} else {
+	cookingTimeToStr := c.QueryParam("cookingTimeTo")
+	if cookingTimeToStr != "" {
 		num, err := strconv.Atoi(cookingTimeToStr)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
-		cookingTimeTo = &num
+		query.CookingTimeTo = &num
 	}
 
-	difficultLevelStr := r.URL.Query().Get("difficultLevels")
-	var difficultLevels []string
-	if difficultLevelStr == "" {
-		difficultLevels = []string{}
-	} else {
-		difficultLevels = strings.Split(difficultLevelStr, ",")
+	difficultLevelStr := c.QueryParam("difficultLevels")
+	if difficultLevelStr != "" {
+		difficultLevels := strings.Split(difficultLevelStr, ",")
+		query.DifficultLevels = &difficultLevels
 	}
 
-	mealCategoriesStr := r.URL.Query().Get("mealCategories")
-	var mealCategories []string
-	if mealCategoriesStr == "" {
-		mealCategories = []string{}
-	} else {
-		mealCategories = strings.Split(mealCategoriesStr, ",")
+	mealCategoriesStr := c.QueryParam("mealCategories")
+	if mealCategoriesStr != "" {
+		mealCategories := strings.Split(mealCategoriesStr, ",")
+		query.MealCategories = &mealCategories
 	}
 
-	ingredientCategoriesStr := r.URL.Query().Get("ingredientCategories")
-	var ingredientCategories []string
-	if ingredientCategoriesStr == "" {
-		ingredientCategories = []string{}
-	} else {
-		ingredientCategories = strings.Split(ingredientCategoriesStr, ",")
+	ingredientCategoriesStr := c.QueryParam("ingredientCategories")
+	if ingredientCategoriesStr != "" {
+		ingredientCategories := strings.Split(ingredientCategoriesStr, ",")
+		query.IngredientCategories = &ingredientCategories
 	}
 
-	ingredientsStr := r.URL.Query().Get("ingredients")
-	var ingredients []string
-	if ingredientsStr == "" {
-		ingredients = []string{}
-	} else {
-		ingredients = strings.Split(ingredientsStr, ",")
+	ingredientsStr := c.QueryParam("ingredients")
+	if ingredientsStr != "" {
+		result := strings.Split(ingredientsStr, ",")
+		query.Ingredients = &result
 	}
 
-	dishes, err := service.NewDishService().Find(
-		keyword,
-		&page,
-		&limit,
-		&tags,
-		preparationTimeFrom,
-		preparationTimeTo,
-		cookingTimeFrom,
-		cookingTimeTo,
-		&difficultLevels,
-		&mealCategories,
-		&ingredientCategories,
-		&ingredients)
+	labelStr := c.QueryParam("labels")
+	var labels []string
+	if labelStr != "" {
+		labels = strings.Split(labelStr, ",")
+		query.Labels = &labels
+	}
+
+	dishService := &service.DishService{}
+	dishes, count, err := dishService.Find(query)
 	if err != nil {
-		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
+		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
-	count, err := service.NewDishService().Count(
-		keyword,
-		&tags,
-		preparationTimeFrom,
-		preparationTimeTo,
-		cookingTimeFrom,
-		cookingTimeTo,
-		&difficultLevels,
-		&mealCategories,
-		&ingredientCategories,
-		&ingredients)
-	if err != nil {
-		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
-		return
-	}
-	w.Write(helper.NewPaginationHelper().PaginationJson(dishes, count))
+	c.JSON(http.StatusOK, helper.NewPaginationHelper().PaginationJson(dishes, count))
 }
 
 func (dc *DishController) FindOne(w http.ResponseWriter, r *http.Request) {

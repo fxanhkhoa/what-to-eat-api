@@ -2,6 +2,9 @@ package main
 
 import (
 	"net/http"
+	"what-to-eat/be/config"
+	"what-to-eat/be/firebase"
+	"what-to-eat/be/router"
 
 	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
@@ -10,6 +13,8 @@ import (
 
 func main() {
 	e := echo.New()
+	config.GetDBInstance()
+	firebase.InitFirebase()
 
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
@@ -26,6 +31,9 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
+
+	userGroup := e.Group("/user")
+	router.UseUserGroup(userGroup)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }

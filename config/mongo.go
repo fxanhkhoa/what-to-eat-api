@@ -5,16 +5,38 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var Client *mongo.Client
-var DatabaseName string
+type MongoDB struct {
+	Client *mongo.Client
+	DbName string
+}
 
-func InitializeMongoDB() {
+var singleInstance *MongoDB
+var lock = &sync.Mutex{}
+
+func GetDBInstance() *MongoDB {
+	if singleInstance == nil {
+		lock.Lock()
+		defer lock.Unlock()
+		if singleInstance == nil {
+			fmt.Println("Creating single instance now.")
+			singleInstance = &MongoDB{}
+			singleInstance.InitializeMongoDB()
+		} else {
+			fmt.Println("Single instance already created.")
+		}
+	}
+
+	return singleInstance
+}
+
+func (d *MongoDB) InitializeMongoDB() {
 	uri := os.Getenv("MONGODB_CONNECTION_STRING")
 	fmt.Println(uri)
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
@@ -37,22 +59,25 @@ func InitializeMongoDB() {
 		panic(err)
 	}
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
-	Client = client
+	d.Client = client
 	dbName := os.Getenv("DATABASE_NAME")
-	DatabaseName = dbName
+	d.DbName = dbName
 
-	indexUserCollection()
-	indexRoleCollection()
-	indexIngredientCollection()
-	indexDishCollection()
+	d.indexUserCollection()
+	d.indexRoleCollection()
+	d.indexIngredientCollection()
+	d.indexDishCollection()
 }
 
-func Init(collectionName string) *mongo.Collection {
-	collection := Client.Database(DatabaseName).Collection(collectionName)
-	return collection
+func (d *MongoDB) GetDbName() string {
+	return d.DbName
 }
 
-func indexUserCollection() {
+func (d *MongoDB) GetClient() *mongo.Client {
+	return d.Client
+}
+
+func (d *MongoDB) indexUserCollection() {
 	indexModel := mongo.IndexModel{
 		Keys: bson.D{{Key: "name", Value: "text"}},
 	}
@@ -62,7 +87,7 @@ func indexUserCollection() {
 		Options: options.Index().SetUnique(true),
 	}
 
-	collection := Client.Database(DatabaseName).Collection("Users")
+	collection := d.Client.Database(d.DbName).Collection("Users")
 	name, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		indexModel, uniqueIDIndexModel,
 	})
@@ -74,13 +99,13 @@ func indexUserCollection() {
 	log.Printf("Created Index Users: %s \n", name)
 }
 
-func indexRoleCollection() {
+func (d *MongoDB) indexRoleCollection() {
 	indexModel := mongo.IndexModel{
 		Keys:    bson.D{{Key: "name", Value: 1}},
 		Options: options.Index().SetUnique(true),
 	}
 
-	collection := Client.Database(DatabaseName).Collection("RolePermissions")
+	collection := d.Client.Database(d.DbName).Collection("RolePermissions")
 	name, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		indexModel,
 	})
@@ -93,7 +118,7 @@ func indexRoleCollection() {
 	log.Printf("Created Index RolePermissions: %s \n", name)
 }
 
-func indexIngredientCollection() {
+func (d *MongoDB) indexIngredientCollection() {
 	indexModel := mongo.IndexModel{
 		Keys:    bson.D{{Key: "title.data", Value: "text"}},
 		Options: options.Index().SetDefaultLanguage("en"),
@@ -104,7 +129,7 @@ func indexIngredientCollection() {
 		Options: options.Index().SetUnique(true),
 	}
 
-	collection := Client.Database(DatabaseName).Collection("Ingredients")
+	collection := d.Client.Database(d.DbName).Collection("Ingredients")
 	name, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		indexModel,
 		uniqueSlug,
@@ -118,7 +143,7 @@ func indexIngredientCollection() {
 	log.Printf("Created Index Ingredients: %s \n", name)
 }
 
-func indexDishCollection() {
+func (d *MongoDB) indexDishCollection() {
 	indexModel := mongo.IndexModel{
 		Keys:    bson.D{{Key: "title.data", Value: "text"}},
 		Options: options.Index().SetDefaultLanguage("en"),
@@ -133,7 +158,7 @@ func indexDishCollection() {
 		Keys: bson.D{{Key: "tags", Value: 1}},
 	}
 
-	collection := Client.Database(DatabaseName).Collection("Dishes")
+	collection := d.Client.Database(d.DbName).Collection("Dishes")
 	name, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		indexModel,
 		uniqueSlug,

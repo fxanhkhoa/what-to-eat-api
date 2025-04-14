@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 	"what-to-eat/be/firebase"
-	"what-to-eat/be/graph/model"
+	"what-to-eat/be/model"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -20,10 +20,6 @@ type CustomClaim struct {
 }
 
 type AuthService struct{}
-
-func NewAuthService() *AuthService {
-	return &AuthService{}
-}
 
 func (a *AuthService) Login(idToken string) (*model.TokenResult, error) {
 	var data model.TokenResult

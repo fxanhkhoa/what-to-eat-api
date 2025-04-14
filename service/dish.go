@@ -4,10 +4,12 @@ import (
 	"context"
 	"log"
 	"time"
-	"what-to-eat/be/graph/model"
-	"what-to-eat/be/shared"
+	"what-to-eat/be/config"
+	constants "what-to-eat/be/constants"
+	"what-to-eat/be/model"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -17,36 +19,22 @@ func NewDishService() *DishService {
 	return &DishService{}
 }
 
-func (ds *DishService) Create(createDishInput model.CreateDishInput, profile *model.User) (*model.Dish, error) {
-	collection := shared.Init("Dishes")
+func (s *DishService) Collection() *mongo.Collection {
+	dbName := config.GetDBInstance().GetDbName()
+	col := config.GetDBInstance().GetClient().Database(dbName).Collection(constants.DISH_COLLECTION)
+	return col
+}
 
-	var title []*model.MultiLanguageD
-	for _, element := range createDishInput.Title {
-		title = append(title, &model.MultiLanguageD{Lang: element.Lang, Data: element.Data})
-	}
-
-	var shortDescription []*model.MultiLanguageD
-	for _, element := range createDishInput.ShortDescription {
-		shortDescription = append(shortDescription, &model.MultiLanguageD{Lang: element.Lang, Data: element.Data})
-	}
-
-	var content []*model.MultiLanguageD
-	for _, element := range createDishInput.Content {
-		content = append(content, &model.MultiLanguageD{Lang: element.Lang, Data: element.Data})
-	}
-
-	var ingredients []*model.IngredientsInDish
-	for _, element := range createDishInput.Ingredients {
-		ingredients = append(ingredients, &model.IngredientsInDish{Quantity: element.Quantity, Slug: element.Slug, Note: element.Note})
-	}
+func (ds *DishService) Create(createDishInput model.CreateDishDto, profile *model.JwtCustomClaims) (*model.Dish, error) {
+	collection := ds.Collection()
 
 	now := time.Now()
 
 	dish := model.Dish{
 		Slug:                 createDishInput.Slug,
-		Title:                title,
-		ShortDescription:     shortDescription,
-		Content:              content,
+		Title:                createDishInput.Title,
+		ShortDescription:     createDishInput.ShortDescription,
+		Content:              createDishInput.Content,
 		Tags:                 createDishInput.Tags,
 		PreparationTime:      createDishInput.PreparationTime,
 		CookingTime:          createDishInput.CookingTime,
@@ -55,8 +43,9 @@ func (ds *DishService) Create(createDishInput model.CreateDishInput, profile *mo
 		IngredientCategories: createDishInput.IngredientCategories,
 		Thumbnail:            createDishInput.Thumbnail,
 		Videos:               createDishInput.Videos,
-		Ingredients:          ingredients,
+		Ingredients:          createDishInput.Ingredients,
 		RelatedDishes:        createDishInput.RelatedDishes,
+		Labels:               createDishInput.Labels,
 		Deleted:              false,
 		UpdatedAt:            &now,
 		UpdatedBy:            &profile.ID,
@@ -74,53 +63,34 @@ func (ds *DishService) Create(createDishInput model.CreateDishInput, profile *mo
 	return &dish, decodeErr
 }
 
-func (ds *DishService) Update(updateDishInput model.UpdateDishInput, profile *model.User) (*model.Dish, error) {
-	collection := shared.Init("Dishes")
-
-	var title []*model.MultiLanguageD
-	for _, element := range updateDishInput.Title {
-		title = append(title, &model.MultiLanguageD{Lang: element.Lang, Data: element.Data})
-	}
-
-	var shortDescription []*model.MultiLanguageD
-	for _, element := range updateDishInput.ShortDescription {
-		shortDescription = append(shortDescription, &model.MultiLanguageD{Lang: element.Lang, Data: element.Data})
-	}
-
-	var content []*model.MultiLanguageD
-	for _, element := range updateDishInput.Content {
-		content = append(content, &model.MultiLanguageD{Lang: element.Lang, Data: element.Data})
-	}
-
-	var ingredients []*model.IngredientsInDish
-	for _, element := range updateDishInput.Ingredients {
-		ingredients = append(ingredients, &model.IngredientsInDish{Quantity: element.Quantity, Slug: element.Slug, Note: element.Note})
-	}
+func (ds *DishService) Update(updateDishInput model.UpdateDishDto, profile *model.JwtCustomClaims) (*model.Dish, error) {
+	collection := ds.Collection()
 
 	now := time.Now()
 
-	dish := model.Dish{
-		Slug:                 updateDishInput.Slug,
-		Title:                title,
-		ShortDescription:     shortDescription,
-		Content:              content,
-		Tags:                 updateDishInput.Tags,
-		PreparationTime:      updateDishInput.PreparationTime,
-		CookingTime:          updateDishInput.CookingTime,
-		DifficultLevel:       updateDishInput.DifficultLevel,
-		MealCategories:       updateDishInput.MealCategories,
-		IngredientCategories: updateDishInput.IngredientCategories,
-		Thumbnail:            updateDishInput.Thumbnail,
-		Videos:               updateDishInput.Videos,
-		Ingredients:          ingredients,
-		RelatedDishes:        updateDishInput.RelatedDishes,
-		UpdatedAt:            &now,
-		UpdatedBy:            &profile.ID,
-	}
+	var dish model.Dish
 
 	filter := bson.M{"slug": updateDishInput.Slug, "deleted": false}
 	options := options.FindOneAndUpdate().SetReturnDocument(options.After).SetUpsert(true)
-	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": dish}, options)
+	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": bson.D{
+		{Key: "slug", Value: updateDishInput.Slug},
+		{Key: "title", Value: updateDishInput.Title},
+		{Key: "shortDescription", Value: updateDishInput.ShortDescription},
+		{Key: "content", Value: updateDishInput.Content},
+		{Key: "tags", Value: updateDishInput.Tags},
+		{Key: "preparationTime", Value: updateDishInput.PreparationTime},
+		{Key: "cookingTime", Value: updateDishInput.CookingTime},
+		{Key: "difficultLevel", Value: updateDishInput.DifficultLevel},
+		{Key: "mealCategories", Value: updateDishInput.MealCategories},
+		{Key: "ingredientCategories", Value: updateDishInput.IngredientCategories},
+		{Key: "thumbnail", Value: updateDishInput.Thumbnail},
+		{Key: "videos", Value: updateDishInput.Videos},
+		{Key: "ingredients", Value: updateDishInput.Ingredients},
+		{Key: "relatedDishes", Value: updateDishInput.RelatedDishes},
+		{Key: "labels", Value: updateDishInput.Labels},
+		{Key: "updatedAt", Value: now},
+		{Key: "updatedBy", Value: profile.ID},
+	}}, options)
 	if result.Err() != nil {
 		return nil, result.Err()
 	}
@@ -129,7 +99,7 @@ func (ds *DishService) Update(updateDishInput model.UpdateDishInput, profile *mo
 }
 
 func (ds *DishService) Remove(slug string, profile *model.User) (*model.Dish, error) {
-	collection := shared.Init("Dishes")
+	collection := ds.Collection()
 	now := time.Now()
 	filter := bson.M{"slug": slug, "deleted": false}
 	options := options.FindOneAndUpdate().SetReturnDocument(options.After)
@@ -146,46 +116,43 @@ func (ds *DishService) Remove(slug string, profile *model.User) (*model.Dish, er
 	return &dish, decodeErr
 }
 
-func (ds *DishService) Find(
-	keyword *string,
-	page *int,
-	limit *int,
-	tags *[]string,
-	preparationTimeFrom *int,
-	preparationTimeTo *int,
-	cookingTimeFrom *int,
-	cookingTimeTo *int,
-	difficultLevels *[]string,
-	mealCategories *[]string,
-	ingredientCategories *[]string,
-	ingredients *[]string) ([]*model.Dish, error) {
-	collection := shared.Init("Dishes")
-	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(*page) - 1) * int64(*limit)).SetLimit(int64(*limit))
+func (ds *DishService) Find(query model.QueryDishDto) ([]*model.Dish, int64, error) {
+	collection := ds.Collection()
+	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(query.Page) - 1) * int64(query.Limit)).SetLimit(int64(query.Limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
-	if keyword != nil {
-		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: keyword}}})
+	if query.Keyword != nil {
+		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: query.Keyword}}})
 	}
-	if tags != nil && len(*tags) > 0 {
-		filter = append(filter, bson.E{Key: "tags", Value: bson.D{{Key: "$in", Value: tags}}})
+	if query.Tags != nil && len(*query.Tags) > 0 {
+		filter = append(filter, bson.E{Key: "tags", Value: bson.D{{Key: "$in", Value: query.Tags}}})
 	}
-	if preparationTimeFrom != nil && preparationTimeTo != nil {
-		filter = append(filter, bson.E{Key: "preparationTime", Value: bson.D{{Key: "$lte", Value: preparationTimeTo}, {Key: "$gte", Value: preparationTimeFrom}}})
+	if query.PreparationTimeFrom != nil && query.PreparationTimeTo != nil {
+		filter = append(filter, bson.E{Key: "preparationTime", Value: bson.D{{Key: "$lte", Value: query.PreparationTimeTo}, {Key: "$gte", Value: query.PreparationTimeFrom}}})
 	}
-	if cookingTimeFrom != nil && cookingTimeTo != nil {
-		filter = append(filter, bson.E{Key: "cookingTime", Value: bson.D{{Key: "$lte", Value: cookingTimeTo}, {Key: "$gte", Value: cookingTimeFrom}}})
+	if query.CookingTimeFrom != nil && query.CookingTimeTo != nil {
+		filter = append(filter, bson.E{Key: "cookingTime", Value: bson.D{{Key: "$lte", Value: query.CookingTimeTo}, {Key: "$gte", Value: query.CookingTimeFrom}}})
 	}
-	if difficultLevels != nil && len(*difficultLevels) > 0 {
-		filter = append(filter, bson.E{Key: "difficultLevel", Value: bson.D{{Key: "$in", Value: difficultLevels}}})
+	if query.DifficultLevels != nil && len(*query.DifficultLevels) > 0 {
+		filter = append(filter, bson.E{Key: "difficultLevel", Value: bson.D{{Key: "$in", Value: query.DifficultLevels}}})
 	}
-	if mealCategories != nil && len(*mealCategories) > 0 {
-		filter = append(filter, bson.E{Key: "mealCategories", Value: bson.D{{Key: "$in", Value: mealCategories}}})
+	if query.MealCategories != nil && len(*query.MealCategories) > 0 {
+		filter = append(filter, bson.E{Key: "mealCategories", Value: bson.D{{Key: "$in", Value: query.MealCategories}}})
 	}
-	if ingredientCategories != nil && len(*ingredientCategories) > 0 {
-		filter = append(filter, bson.E{Key: "ingredientCategories", Value: bson.D{{Key: "$in", Value: ingredientCategories}}})
+	if query.IngredientCategories != nil && len(*query.IngredientCategories) > 0 {
+		filter = append(filter, bson.E{Key: "ingredientCategories", Value: bson.D{{Key: "$in", Value: query.IngredientCategories}}})
 	}
-	if ingredients != nil && len(*ingredients) > 0 {
-		filter = append(filter, bson.E{Key: "ingredients.slug", Value: bson.D{{Key: "$in", Value: ingredients}}})
+	if query.Ingredients != nil && len(*query.Ingredients) > 0 {
+		filter = append(filter, bson.E{Key: "ingredients.slug", Value: bson.D{{Key: "$in", Value: query.Ingredients}}})
 	}
+	if query.Labels != nil && len(*query.Labels) > 0 {
+		filter = append(filter, bson.E{Key: "labels", Value: bson.D{{Key: "$in", Value: query.Labels}}})
+	}
+
+	count, err := collection.CountDocuments(context.TODO(), filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	cursor, err := collection.Find(context.TODO(), filter, opts)
 	if err != nil {
 		log.Println(err)
@@ -195,11 +162,11 @@ func (ds *DishService) Find(
 		log.Println(err)
 	}
 	defer cursor.Close(context.TODO())
-	return dishes, err
+	return dishes, count, err
 }
 
 func (ds *DishService) FindOne(slug string) (*model.Dish, error) {
-	collection := shared.Init("Dishes")
+	collection := ds.Collection()
 	filter := bson.M{"slug": slug}
 	result := collection.FindOne(context.TODO(), filter)
 	if result.Err() != nil {
@@ -210,53 +177,8 @@ func (ds *DishService) FindOne(slug string) (*model.Dish, error) {
 	return &dish, decodeErr
 }
 
-func (ds *DishService) Count(
-	keyword *string,
-	tags *[]string,
-	preparationTimeFrom *int,
-	preparationTimeTo *int,
-	cookingTimeFrom *int,
-	cookingTimeTo *int,
-	difficultLevels *[]string,
-	mealCategories *[]string,
-	ingredientCategories *[]string,
-	ingredients *[]string) (int64, error) {
-	collection := shared.Init("Dishes")
-	filter := bson.D{{Key: "deleted", Value: false}}
-	if keyword != nil {
-		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: keyword}}})
-	}
-	if tags != nil && len(*tags) > 0 {
-		filter = append(filter, bson.E{Key: "tags", Value: bson.D{{Key: "$in", Value: tags}}})
-	}
-	if preparationTimeFrom != nil && preparationTimeTo != nil {
-		filter = append(filter, bson.E{Key: "preparationTime", Value: bson.D{{Key: "$lte", Value: preparationTimeTo}, {Key: "$gte", Value: preparationTimeFrom}}})
-	}
-	if cookingTimeFrom != nil && cookingTimeTo != nil {
-		filter = append(filter, bson.E{Key: "cookingTime", Value: bson.D{{Key: "$lte", Value: cookingTimeTo}, {Key: "$gte", Value: cookingTimeFrom}}})
-	}
-	if difficultLevels != nil && len(*difficultLevels) > 0 {
-		filter = append(filter, bson.E{Key: "difficultLevel", Value: bson.D{{Key: "$in", Value: difficultLevels}}})
-	}
-	if mealCategories != nil && len(*mealCategories) > 0 {
-		filter = append(filter, bson.E{Key: "mealCategories", Value: bson.D{{Key: "$in", Value: mealCategories}}})
-	}
-	if ingredientCategories != nil && len(*ingredientCategories) > 0 {
-		filter = append(filter, bson.E{Key: "ingredientCategories", Value: bson.D{{Key: "$in", Value: ingredientCategories}}})
-	}
-	if ingredients != nil && len(*ingredients) > 0 {
-		filter = append(filter, bson.E{Key: "ingredients.slug", Value: bson.D{{Key: "$in", Value: ingredients}}})
-	}
-	total, err := collection.CountDocuments(context.TODO(), filter)
-	if err != nil {
-		return 0, err
-	}
-
-	return total, err
-}
-
 func (ds *DishService) Random(limit *int) ([]*model.Dish, error) {
-	collection := shared.Init("Dishes")
+	collection := ds.Collection()
 	stages := []bson.D{}
 	stages = append(stages, bson.D{{Key: "$match", Value: bson.D{{Key: "deleted", Value: false}}}})
 	stages = append(stages, bson.D{{Key: "$sample", Value: bson.D{{Key: "size", Value: int64(*limit)}}}})

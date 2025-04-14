@@ -4,12 +4,14 @@ import (
 	"context"
 	"log"
 	"time"
-	"what-to-eat/be/graph/model"
-	"what-to-eat/be/shared"
+	"what-to-eat/be/config"
+	"what-to-eat/be/constants"
+	"what-to-eat/be/model"
 
 	"firebase.google.com/go/v4/auth"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -19,8 +21,14 @@ func NewUserService() *UserService {
 	return &UserService{}
 }
 
+func (s *UserService) Collection() *mongo.Collection {
+	dbName := config.GetDBInstance().GetDbName()
+	col := config.GetDBInstance().GetClient().Database(dbName).Collection(constants.USER_COLLECTION)
+	return col
+}
+
 func (u *UserService) FindUserByUID(googleID string) (*model.User, error) {
-	collection := shared.Init("Users")
+	collection := u.Collection()
 	var user *model.User
 	filter := bson.M{"googleID": googleID}
 	result := collection.FindOne(context.TODO(), filter)
@@ -32,7 +40,7 @@ func (u *UserService) FindUserByUID(googleID string) (*model.User, error) {
 }
 
 func (u *UserService) CreateUserWithGoogle(queriedUser *auth.UserRecord) (*model.User, error) {
-	collection := shared.Init("Users")
+	collection := u.Collection()
 	now := time.Now()
 	user := model.User{
 		Email:       queriedUser.Email,
@@ -58,7 +66,7 @@ func (u *UserService) CreateUserWithGoogle(queriedUser *auth.UserRecord) (*model
 }
 
 func (u *UserService) FindByID(id string) (*model.User, error) {
-	collection := shared.Init("Users")
+	collection := u.Collection()
 	var user *model.User
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -73,8 +81,8 @@ func (u *UserService) FindByID(id string) (*model.User, error) {
 	return user, decodeErr
 }
 
-func (u *UserService) Create(createUserInput model.CreateUserInput, profile *model.User) (*model.User, error) {
-	collection := shared.Init("Users")
+func (u *UserService) Create(createUserInput model.CreateUserDto, profile *model.JwtCustomClaims) (*model.User, error) {
+	collection := u.Collection()
 	now := time.Now()
 	user := model.User{
 		Email:       createUserInput.Email,
@@ -105,25 +113,11 @@ func (u *UserService) Create(createUserInput model.CreateUserInput, profile *mod
 	return &user, decodeErr
 }
 
-func (u *UserService) Update(updateUserInput model.UpdateUserInput, profile *model.User) (*model.User, error) {
-	collection := shared.Init("Users")
+func (u *UserService) Update(updateUserInput model.UpdateUserDto, profile *model.JwtCustomClaims) (*model.User, error) {
+	collection := u.Collection()
 	now := time.Now()
-	user := model.User{
-		Email:       updateUserInput.Email,
-		Name:        updateUserInput.Name,
-		DateOfBirth: updateUserInput.DateOfBirth,
-		Address:     updateUserInput.Address,
-		Phone:       updateUserInput.Phone,
-		GoogleID:    updateUserInput.GoogleID,
-		FacebookID:  new(string),
-		GithubID:    new(string),
-		Avatar:      updateUserInput.Avatar,
-		Deleted:     false,
-		UpdatedAt:   &now,
-		UpdatedBy:   &profile.ID,
-		CreatedAt:   &now,
-		CreatedBy:   &profile.ID,
-	}
+
+	var user model.User
 
 	objectID, err := primitive.ObjectIDFromHex(updateUserInput.ID)
 	if err != nil {
@@ -132,7 +126,19 @@ func (u *UserService) Update(updateUserInput model.UpdateUserInput, profile *mod
 	filter := bson.M{"_id": objectID, "deleted": false}
 
 	options := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
-	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": user}, options)
+	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": bson.D{
+		{Key: "email", Value: updateUserInput.Email},
+		{Key: "name", Value: updateUserInput.Name},
+		{Key: "dateOfBirth", Value: updateUserInput.DateOfBirth},
+		{Key: "address", Value: updateUserInput.Address},
+		{Key: "phone", Value: updateUserInput.Phone},
+		{Key: "googleID", Value: updateUserInput.GoogleID},
+		{Key: "facebookID", Value: updateUserInput.FacebookID},
+		{Key: "githubID", Value: updateUserInput.GithubID},
+		{Key: "avatar", Value: updateUserInput.Avatar},
+		{Key: "updatedAt", Value: &now},
+		{Key: "updatedBy", Value: &profile.ID},
+	}}, options)
 	if result.Err() != nil {
 		return nil, result.Err()
 	}
@@ -140,8 +146,8 @@ func (u *UserService) Update(updateUserInput model.UpdateUserInput, profile *mod
 	return &user, decodeErr
 }
 
-func (u *UserService) Remove(id string, profile *model.User) (*model.User, error) {
-	collection := shared.Init("Users")
+func (u *UserService) Remove(id string, profile *model.JwtCustomClaims) (*model.User, error) {
+	collection := u.Collection()
 	now := time.Now()
 	var user model.User
 	objectID, err := primitive.ObjectIDFromHex(id)
@@ -166,7 +172,7 @@ func (u *UserService) Remove(id string, profile *model.User) (*model.User, error
 }
 
 func (u *UserService) UpdateRole(id string, roleName string, profile *model.User) (*model.User, error) {
-	collection := shared.Init("Users")
+	collection := u.Collection()
 	now := time.Now()
 	var user model.User
 	objectID, err := primitive.ObjectIDFromHex(id)
@@ -190,24 +196,36 @@ func (u *UserService) UpdateRole(id string, roleName string, profile *model.User
 	return &user, decodeErr
 }
 
-func (u *UserService) Find(keyword *string, page *int, limit *int) ([]*model.User, error) {
-	collection := shared.Init("Users")
-	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(*page) - 1) * int64(*limit)).SetLimit(int64(*limit))
+func (u *UserService) FindAll(dto model.QueryUserDto) ([]*model.User, int64, error) {
+	collection := u.Collection()
+	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(dto.Page) - 1) * int64(dto.Limit)).SetLimit(int64(dto.Limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
+
+	if dto.Keyword != "" {
+		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: dto.Keyword}}})
+	}
+
+	count, err := u.Collection().CountDocuments(context.TODO(), filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	cursor, err := collection.Find(context.TODO(), filter, opts)
 	if err != nil {
 		log.Printf("Users error: %s \n", err.Error())
 	}
+
 	var users []*model.User
 	if err = cursor.All(context.TODO(), &users); err != nil {
 		log.Printf("Users error: %s \n", err.Error())
 	}
+
 	defer cursor.Close(context.TODO())
-	return users, err
+	return users, count, err
 }
 
 func (u *UserService) FindOne(id string) (*model.User, error) {
-	collection := shared.Init("Users")
+	collection := u.Collection()
 	var user model.User
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -223,7 +241,7 @@ func (u *UserService) FindOne(id string) (*model.User, error) {
 }
 
 func (u *UserService) FindByEmail(email string) (*model.User, error) {
-	collection := shared.Init("Users")
+	collection := u.Collection()
 	var user model.User
 	filter := bson.M{"email": email, "deleted": false}
 	result := collection.FindOne(context.TODO(), filter)
