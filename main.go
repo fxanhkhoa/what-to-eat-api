@@ -1,17 +1,29 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"os"
 	"what-to-eat/be/config"
 	"what-to-eat/be/firebase"
 	"what-to-eat/be/router"
 
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Print(err)
+	}
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "1323"
+	}
+
 	e := echo.New()
 	config.GetDBInstance()
 	firebase.InitFirebase()
@@ -35,5 +47,14 @@ func main() {
 	userGroup := e.Group("/user")
 	router.UseUserGroup(userGroup)
 
-	e.Logger.Fatal(e.Start(":1323"))
+	dishGroup := e.Group("/dish")
+	router.UseDishRouter(dishGroup)
+
+	ingredientGroup := e.Group("/ingredient")
+	router.UseIngredientRouter(ingredientGroup)
+
+	dishVoteGroup := e.Group("/dishVote")
+	router.UseDishVoteRouter(dishVoteGroup)
+
+	e.Logger.Fatal(e.Start(":" + port))
 }

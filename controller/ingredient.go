@@ -1,76 +1,78 @@
 package controller
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
-	"what-to-eat/be/graph/service"
 	"what-to-eat/be/helper"
+	"what-to-eat/be/model"
+	"what-to-eat/be/service"
 
-	"github.com/gorilla/mux"
+	"github.com/labstack/echo/v4"
 )
 
 type IngredientController struct{}
 
-func NewIngredientController() *IngredientController {
-	return &IngredientController{}
+func (ic *IngredientController) Find(c echo.Context) error {
+	var query model.QueryIngredientDto
+
+	var err error
+	query.BaseDto.Page, err = strconv.Atoi(c.QueryParam("page"))
+	if err != nil || query.BaseDto.Page < 0 {
+		query.BaseDto.Page = 1
+	}
+
+	query.BaseDto.Limit, err = strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || query.BaseDto.Limit < 0 {
+		query.BaseDto.Limit = 10
+	}
+
+	keyword := c.QueryParam("keyword")
+	if keyword != "" {
+		query.Keyword = &keyword
+	}
+
+	s := &service.IngredientService{}
+
+	ingredients, count, err := s.Find(query)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return err
+	}
+	return c.JSON(http.StatusOK, helper.PaginationObject{
+		Data:  ingredients,
+		Count: count})
 }
 
-func (ic *IngredientController) Find(w http.ResponseWriter, r *http.Request) {
-	pageStr := r.URL.Query().Get("page")
-	if pageStr == "" {
-		pageStr = "1"
-	}
-
-	page, errPage := strconv.Atoi(pageStr)
-	if errPage != nil {
-		http.Error(w, helper.NewResponseHelper().ErrorJson(errPage.Error()), http.StatusBadRequest)
-		return
-	}
-
-	limitStr := r.URL.Query().Get("limit")
-	if limitStr == "" {
-		limitStr = "10"
-	}
-
-	limit, errLimit := strconv.Atoi(limitStr)
-	if errLimit != nil {
-		http.Error(w, helper.NewResponseHelper().ErrorJson(errLimit.Error()), http.StatusBadRequest)
-		return
-	}
-
-	keywordStr := r.URL.Query().Get("keyword")
-	var keyword *string
-	if keywordStr == "" {
-		keyword = nil
-	} else {
-		keyword = &keywordStr
-	}
-
-	ingredients, err := service.NewIngredientService().Find(keyword, &page, &limit)
+func (ic *IngredientController) FindOne(c echo.Context) error {
+	id := c.Param("id")
+	service := &service.IngredientService{}
+	ingredient, err := service.FindOne(id)
 	if err != nil {
-		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
-		return
+		c.String(http.StatusInternalServerError, err.Error())
+		return err
 	}
-	count, err := service.NewIngredientService().Count(keyword)
-	if err != nil {
-		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
-		return
-	}
-	w.Write(helper.NewPaginationHelper().PaginationJson(ingredients, count))
+	return c.JSON(http.StatusOK, ingredient)
 }
 
-func (ic *IngredientController) FindOne(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	ingredient, err := service.NewIngredientService().FindOne(vars["slug"])
+func (ic *IngredientController) FindOneBySlug(c echo.Context) error {
+	slug := c.Param("slug")
+	service := &service.IngredientService{}
+	ingredient, err := service.FindOneBySlug(slug)
 	if err != nil {
-		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
-		return
+		c.String(http.StatusInternalServerError, err.Error())
+		return err
 	}
-	decoded, err := json.Marshal(ingredient)
+	return c.JSON(http.StatusOK, ingredient)
+}
+
+func (ic *IngredientController) FindOneByTitleLang(c echo.Context) error {
+	title := c.QueryParam("title")
+	lang := c.QueryParam("lang")
+	service := &service.IngredientService{}
+	ingredient, err := service.FindTitleByLang(title, lang)
 	if err != nil {
-		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
-		return
+		c.String(http.StatusInternalServerError, err.Error())
+		return err
 	}
-	w.Write(decoded)
+	return c.JSON(http.StatusOK, ingredient)
 }

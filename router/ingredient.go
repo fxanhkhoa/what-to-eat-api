@@ -6,11 +6,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func UseDishRouter(group *echo.Group) {
+func UseIngredientRouter(group *echo.Group) {
 	// aG := middleware.NewAuthGuard()
 	// rG := middleware.NewRoleGuard()
-	controller := &controllers.DishController{}
+	controller := &controllers.IngredientController{}
 	group.GET("/", controller.Find)
+	group.GET("/byTitleLang", controller.Find)
 	group.GET("/:id", controller.FindOne)
 	group.GET("/slug/:slug", controller.FindOneBySlug)
 	// group.POST("/", controller.Create, aG.AuthGuard, rG.RoleGuard([]string{constants.CREATE_DISH}))

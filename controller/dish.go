@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,7 +9,6 @@ import (
 	"what-to-eat/be/model"
 	"what-to-eat/be/service"
 
-	"github.com/gorilla/mux"
 	"github.com/labstack/echo/v4"
 )
 
@@ -19,7 +18,7 @@ func NewDishController() *DishController {
 	return &DishController{}
 }
 
-func (dc *DishController) Find(c echo.Context) {
+func (dc *DishController) Find(c echo.Context) error {
 	var query model.QueryDishDto
 
 	var err error
@@ -48,7 +47,7 @@ func (dc *DishController) Find(c echo.Context) {
 		num, err := strconv.Atoi(preparationTimeFromStr)
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
-			return
+			return err
 		}
 		query.PreparationTimeFrom = &num
 	}
@@ -58,7 +57,7 @@ func (dc *DishController) Find(c echo.Context) {
 		num, err := strconv.Atoi(preparationTimeToStr)
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
-			return
+			return err
 		}
 		query.PreparationTimeTo = &num
 	}
@@ -68,7 +67,7 @@ func (dc *DishController) Find(c echo.Context) {
 		num, err := strconv.Atoi(cookingTimeFromStr)
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
-			return
+			return err
 		}
 		query.CookingTimeFrom = &num
 	}
@@ -78,7 +77,7 @@ func (dc *DishController) Find(c echo.Context) {
 		num, err := strconv.Atoi(cookingTimeToStr)
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
-			return
+			return err
 		}
 		query.CookingTimeTo = &num
 	}
@@ -118,49 +117,52 @@ func (dc *DishController) Find(c echo.Context) {
 	dishes, count, err := dishService.Find(query)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
-		return
+		return err
 	}
-	c.JSON(http.StatusOK, helper.NewPaginationHelper().PaginationJson(dishes, count))
+
+	fmt.Println(dishes)
+
+	return c.JSON(http.StatusOK, helper.PaginationObject{
+		Data:  dishes,
+		Count: count,
+	})
 }
 
-func (dc *DishController) FindOne(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	dish, err := service.NewDishService().FindOne(vars["slug"])
+func (dc *DishController) FindOne(c echo.Context) error {
+	id := c.Param("id")
+	s := &service.DishService{}
+	dish, err := s.FindOne(id)
 	if err != nil {
-		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
-		return
+		c.String(http.StatusInternalServerError, err.Error())
+		return err
 	}
-	decoded, err := json.Marshal(dish)
-	if err != nil {
-		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
-		return
-	}
-	w.Write(decoded)
+	return c.JSON(http.StatusOK, dish)
 }
 
-func (dc *DishController) FindRandom(w http.ResponseWriter, r *http.Request) {
-	limitStr := r.URL.Query().Get("limit")
-	if limitStr == "" {
-		limitStr = "10"
-	}
-
-	limit, errLimit := strconv.Atoi(limitStr)
-	if errLimit != nil {
-		http.Error(w, helper.NewResponseHelper().ErrorJson(errLimit.Error()), http.StatusBadRequest)
-		return
-	}
-
-	dishes, err := service.NewDishService().Random(&limit)
+func (dc *DishController) FindOneBySlug(c echo.Context) error {
+	slug := c.Param("slug")
+	s := &service.DishService{}
+	dish, err := s.FindOneBySlug(slug)
 	if err != nil {
-		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
-		return
+		c.String(http.StatusInternalServerError, err.Error())
+		return err
+	}
+	return c.JSON(http.StatusOK, dish)
+}
+
+func (dc *DishController) FindRandom(c echo.Context) error {
+
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || limit < 0 {
+		limit = 10
 	}
 
-	decoded, err := json.Marshal(dishes)
+	s := &service.DishService{}
+	dishes, err := s.Random(&limit)
 	if err != nil {
-		http.Error(w, helper.NewResponseHelper().ErrorJson(err.Error()), http.StatusInternalServerError)
-		return
+		c.String(http.StatusInternalServerError, err.Error())
+		return err
 	}
 
-	w.Write(decoded)
+	return c.JSON(http.StatusOK, dishes)
 }

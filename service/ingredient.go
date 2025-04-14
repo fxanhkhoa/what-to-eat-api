@@ -2,31 +2,34 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
-	"what-to-eat/be/graph/model"
-	"what-to-eat/be/shared"
+	"what-to-eat/be/config"
+	constants "what-to-eat/be/constants"
+	"what-to-eat/be/model"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type IngredientService struct{}
 
-func NewIngredientService() *IngredientService {
-	return &IngredientService{}
+func (is *IngredientService) Collection() *mongo.Collection {
+	dbName := config.GetDBInstance().GetDbName()
+	col := config.GetDBInstance().GetClient().Database(dbName).Collection(constants.INGREDIENT_COLLECTION)
+	return col
 }
 
-func (is *IngredientService) Create(createIngredientInput model.CreateIngredientInput, profile *model.User) (*model.Ingredient, error) {
-	collection := shared.Init("Ingredients")
-	var title []*model.MultiLanguage
-	for _, element := range createIngredientInput.Title {
-		title = append(title, &model.MultiLanguage{Lang: element.Lang, Data: element.Data})
-	}
+func (is *IngredientService) Create(createIngredientInput model.CreateIngredientDto, profile *model.JwtCustomClaims) (*model.Ingredient, error) {
+	collection := is.Collection()
+
 	now := time.Now()
+
 	ingredient := model.Ingredient{
 		Slug:               createIngredientInput.Slug,
-		Title:              title,
+		Title:              createIngredientInput.Title,
 		Measure:            createIngredientInput.Measure,
 		Calories:           createIngredientInput.Calories,
 		Carbohydrate:       createIngredientInput.Carbohydrate,
@@ -53,32 +56,30 @@ func (is *IngredientService) Create(createIngredientInput model.CreateIngredient
 	return &ingredient, decodeErr
 }
 
-func (is *IngredientService) Update(updateIngredientInput model.UpdateIngredientInput, profile *model.User) (*model.Ingredient, error) {
-	collection := shared.Init("Ingredients")
-	var title []*model.MultiLanguage
-	for _, element := range updateIngredientInput.Title {
-		title = append(title, &model.MultiLanguage{Lang: element.Lang, Data: element.Data})
-	}
+func (is *IngredientService) Update(updateIngredientInput model.UpdateIngredientDto, profile *model.JwtCustomClaims) (*model.Ingredient, error) {
+	collection := is.Collection()
 	now := time.Now()
-	ingredient := model.Ingredient{
-		Slug:               updateIngredientInput.Slug,
-		Title:              title,
-		Measure:            updateIngredientInput.Measure,
-		Calories:           updateIngredientInput.Calories,
-		Carbohydrate:       updateIngredientInput.Carbohydrate,
-		Fat:                updateIngredientInput.Fat,
-		IngredientCategory: updateIngredientInput.IngredientCategory,
-		Weight:             updateIngredientInput.Weight,
-		Protein:            updateIngredientInput.Protein,
-		Cholesterol:        updateIngredientInput.Cholesterol,
-		Sodium:             updateIngredientInput.Sodium,
-		Images:             updateIngredientInput.Images,
-		UpdatedAt:          &now,
-		UpdatedBy:          &profile.ID,
-	}
+	var ingredient model.Ingredient
+
 	filter := bson.M{"slug": updateIngredientInput.Slug, "deleted": false}
 	options := options.FindOneAndUpdate().SetReturnDocument(options.After).SetUpsert(true)
-	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": ingredient}, options)
+	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": bson.M{
+		"slug":               updateIngredientInput.Slug,
+		"title":              updateIngredientInput.Title,
+		"measure":            updateIngredientInput.Measure,
+		"calories":           updateIngredientInput.Calories,
+		"carbohydrate":       updateIngredientInput.Carbohydrate,
+		"fat":                updateIngredientInput.Fat,
+		"ingredientCategory": updateIngredientInput.IngredientCategory,
+		"weight":             updateIngredientInput.Weight,
+		"protein":            updateIngredientInput.Protein,
+		"cholesterol":        updateIngredientInput.Cholesterol,
+		"sodium":             updateIngredientInput.Sodium,
+		"images":             updateIngredientInput.Images,
+		"updatedAt":          &now,
+		"updatedBy":          &profile.ID,
+	}}, options)
+
 	if result.Err() != nil {
 		return nil, result.Err()
 	}
@@ -87,7 +88,7 @@ func (is *IngredientService) Update(updateIngredientInput model.UpdateIngredient
 }
 
 func (is *IngredientService) Remove(slug string, profile *model.User) (*model.Ingredient, error) {
-	collection := shared.Init("Ingredients")
+	collection := is.Collection()
 	now := time.Now()
 	filter := bson.M{"slug": slug, "deleted": false}
 	options := options.FindOneAndUpdate().SetReturnDocument(options.After)
@@ -104,13 +105,19 @@ func (is *IngredientService) Remove(slug string, profile *model.User) (*model.In
 	return &ingredient, decodeErr
 }
 
-func (is *IngredientService) Find(keyword *string, page *int, limit *int) ([]*model.Ingredient, error) {
-	collection := shared.Init("Ingredients")
-	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(*page) - 1) * int64(*limit)).SetLimit(int64(*limit))
+func (is *IngredientService) Find(query model.QueryIngredientDto) ([]*model.Ingredient, int64, error) {
+	collection := is.Collection()
+	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(query.Page) - 1) * int64(query.Limit)).SetLimit(int64(query.Limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
-	if keyword != nil {
-		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: keyword}}})
+	if query.Keyword != nil && *query.Keyword != "" {
+		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: *query.Keyword}}})
 	}
+
+	count, err := collection.CountDocuments(context.TODO(), filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	cursor, err := collection.Find(context.TODO(), filter, opts)
 	if err != nil {
 		log.Println(err)
@@ -120,11 +127,23 @@ func (is *IngredientService) Find(keyword *string, page *int, limit *int) ([]*mo
 		log.Println(err)
 	}
 	defer cursor.Close(context.TODO())
-	return ingredients, err
+	return ingredients, count, err
 }
 
-func (is *IngredientService) FindOne(slug string) (*model.Ingredient, error) {
-	collection := shared.Init("Ingredients")
+func (is *IngredientService) FindOne(id string) (*model.Ingredient, error) {
+	collection := is.Collection()
+	filter := bson.M{"_id": id}
+	result := collection.FindOne(context.TODO(), filter)
+	if result.Err() != nil {
+		return nil, result.Err()
+	}
+	ingredient := model.Ingredient{}
+	decodeErr := result.Decode(&ingredient)
+	return &ingredient, decodeErr
+}
+
+func (is *IngredientService) FindOneBySlug(slug string) (*model.Ingredient, error) {
+	collection := is.Collection()
 	filter := bson.M{"slug": slug}
 	result := collection.FindOne(context.TODO(), filter)
 	if result.Err() != nil {
@@ -135,16 +154,18 @@ func (is *IngredientService) FindOne(slug string) (*model.Ingredient, error) {
 	return &ingredient, decodeErr
 }
 
-func (is *IngredientService) Count(keyword *string) (int64, error) {
-	collection := shared.Init("Ingredients")
-	filter := bson.D{{Key: "deleted", Value: false}}
-	if keyword != nil {
-		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: keyword}}})
+func (is *IngredientService) FindTitleByLang(title string, lang string) (*model.Ingredient, error) {
+	collection := is.Collection()
+	titleFilter := fmt.Sprintf("title.%s", lang)
+	filter := bson.M{titleFilter: title}
+	result := collection.FindOne(context.TODO(), filter)
+	if result.Err() != nil {
+		return nil, result.Err()
 	}
-	total, err := collection.CountDocuments(context.TODO(), filter)
-	if err != nil {
-		return 0, err
+	ingredient := model.Ingredient{}
+	decodeErr := result.Decode(&ingredient)
+	if decodeErr != nil {
+		return nil, decodeErr
 	}
-
-	return total, err
+	return &ingredient, decodeErr
 }

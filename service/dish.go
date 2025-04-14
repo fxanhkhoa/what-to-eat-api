@@ -15,10 +15,6 @@ import (
 
 type DishService struct{}
 
-func NewDishService() *DishService {
-	return &DishService{}
-}
-
 func (s *DishService) Collection() *mongo.Collection {
 	dbName := config.GetDBInstance().GetDbName()
 	col := config.GetDBInstance().GetClient().Database(dbName).Collection(constants.DISH_COLLECTION)
@@ -165,7 +161,19 @@ func (ds *DishService) Find(query model.QueryDishDto) ([]*model.Dish, int64, err
 	return dishes, count, err
 }
 
-func (ds *DishService) FindOne(slug string) (*model.Dish, error) {
+func (ds *DishService) FindOne(id string) (*model.Dish, error) {
+	collection := ds.Collection()
+	filter := bson.M{"_id": id}
+	result := collection.FindOne(context.TODO(), filter)
+	if result.Err() != nil {
+		return nil, result.Err()
+	}
+	dish := model.Dish{}
+	decodeErr := result.Decode(&dish)
+	return &dish, decodeErr
+}
+
+func (ds *DishService) FindOneBySlug(slug string) (*model.Dish, error) {
 	collection := ds.Collection()
 	filter := bson.M{"slug": slug}
 	result := collection.FindOne(context.TODO(), filter)

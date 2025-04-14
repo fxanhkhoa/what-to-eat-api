@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -37,8 +38,11 @@ func GetDBInstance() *MongoDB {
 }
 
 func (d *MongoDB) InitializeMongoDB() {
+	if err := godotenv.Load(); err != nil {
+		fmt.Print(err)
+	}
+
 	uri := os.Getenv("MONGODB_CONNECTION_STRING")
-	fmt.Println(uri)
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 
 	opts := options.Client().ApplyURI(uri).SetServerAPIOptions(serverAPI)

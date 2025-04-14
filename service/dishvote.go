@@ -4,8 +4,9 @@ import (
 	"context"
 	"log"
 	"time"
-	"what-to-eat/be/graph/model"
-	"what-to-eat/be/shared"
+	"what-to-eat/be/config"
+	constants "what-to-eat/be/constants"
+	"what-to-eat/be/model"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -15,24 +16,21 @@ import (
 
 type DishVoteService struct{}
 
-func NewDishVoteService() *DishVoteService {
-	return &DishVoteService{}
+func (dvs *DishVoteService) Collection() *mongo.Collection {
+	dbName := config.GetDBInstance().GetDbName()
+	col := config.GetDBInstance().GetClient().Database(dbName).Collection(constants.DISH_VOTE_COLLECTION)
+	return col
 }
 
-func (dvs *DishVoteService) Create(createDishVoteInput model.CreateDishVoteInput, profile *model.User) (*mongo.InsertOneResult, error) {
-	collection := shared.Init("DishVotes")
+func (dvs *DishVoteService) Create(createDishVoteInput model.CreateDishVoteDto, profile *model.JwtCustomClaims) (*mongo.InsertOneResult, error) {
+	collection := dvs.Collection()
 
 	now := time.Now()
-
-	var dishVoteItems []*model.DishVoteItem
-	for _, element := range createDishVoteInput.DishVoteItems {
-		dishVoteItems = append(dishVoteItems, &model.DishVoteItem{Slug: element.Slug, VoteUser: element.VoteUser, VoteAnonymous: element.VoteAnonymous})
-	}
 
 	dishVote := model.DishVote{
 		Title:         createDishVoteInput.Title,
 		Description:   createDishVoteInput.Description,
-		DishVoteItems: dishVoteItems,
+		DishVoteItems: createDishVoteInput.DishVoteItems,
 		Deleted:       false,
 		UpdatedAt:     &now,
 		UpdatedBy:     &profile.ID,
@@ -47,41 +45,32 @@ func (dvs *DishVoteService) Create(createDishVoteInput model.CreateDishVoteInput
 	return result, nil
 }
 
-func (dvs *DishVoteService) Update(updateDishVoteInput model.UpdateDishVoteInput, profile *model.User) (*model.DishVote, error) {
-	collection := shared.Init("DishVotes")
-
-	var dishVoteItems []*model.DishVoteItem
-	for _, element := range updateDishVoteInput.DishVoteItems {
-		dishVoteItems = append(dishVoteItems, &model.DishVoteItem{Slug: element.Slug, VoteUser: element.VoteUser, VoteAnonymous: element.VoteAnonymous})
-	}
+func (dvs *DishVoteService) Update(updateDishVoteInput model.UpdateDishVoteDto, profile *model.JwtCustomClaims) (*model.DishVote, error) {
+	collection := dvs.Collection()
 
 	now := time.Now()
 
-	dishVote := model.DishVote{
-		Title:         updateDishVoteInput.Title,
-		Description:   updateDishVoteInput.Description,
-		DishVoteItems: dishVoteItems,
-		UpdatedAt:     &now,
-		UpdatedBy:     &profile.ID,
-	}
-	objID, err := primitive.ObjectIDFromHex(updateDishVoteInput.ID)
+	var dishVote model.DishVote
 
-	if err != nil {
-		return nil, err
-	}
-
-	filter := bson.M{"_id": objID, "deleted": false}
+	filter := bson.M{"_id": updateDishVoteInput.ID, "deleted": false}
 	options := options.FindOneAndUpdate().SetReturnDocument(options.After).SetUpsert(true)
-	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": dishVote}, options)
+	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": bson.D{
+		{Key: "title", Value: updateDishVoteInput.Title},
+		{Key: "description", Value: updateDishVoteInput.Description},
+		{Key: "dishVoteItems", Value: updateDishVoteInput.DishVoteItems},
+		{Key: "updatedAt", Value: now},
+		{Key: "updatedBy", Value: profile.ID},
+	}}, options)
 	if result.Err() != nil {
 		return nil, result.Err()
 	}
+
 	decodeErr := result.Decode(&dishVote)
 	return &dishVote, decodeErr
 }
 
 func (dvs *DishVoteService) Remove(id string, profile *model.User) (*model.DishVote, error) {
-	collection := shared.Init("DishVotes")
+	collection := dvs.Collection()
 	now := time.Now()
 	filter := bson.M{"_id": id, "deleted": false}
 	options := options.FindOneAndUpdate().SetReturnDocument(options.After)
@@ -98,16 +87,19 @@ func (dvs *DishVoteService) Remove(id string, profile *model.User) (*model.DishV
 	return &dishVote, decodeErr
 }
 
-func (dvs *DishVoteService) Find(
-	keyword *string,
-	page *int,
-	limit *int) ([]*model.DishVote, error) {
-	collection := shared.Init("DishVotes")
-	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(*page) - 1) * int64(*limit)).SetLimit(int64(*limit))
+func (dvs *DishVoteService) Find(query model.QueryDishVoteDto) ([]*model.DishVote, int64, error) {
+	collection := dvs.Collection()
+	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(query.Page) - 1) * int64(query.Limit)).SetLimit(int64(query.Limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
-	if keyword != nil {
-		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: keyword}}})
+	if query.Keyword != nil && *query.Keyword != "" {
+		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: *query.Keyword}}})
 	}
+
+	count, err := collection.CountDocuments(context.TODO(), filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	cursor, err := collection.Find(context.TODO(), filter, opts)
 	if err != nil {
 		log.Println(err)
@@ -117,11 +109,11 @@ func (dvs *DishVoteService) Find(
 		log.Println(err)
 	}
 	defer cursor.Close(context.TODO())
-	return dishVotes, err
+	return dishVotes, count, err
 }
 
 func (dvs *DishVoteService) FindOne(id string) (*model.DishVote, error) {
-	collection := shared.Init("DishVotes")
+	collection := dvs.Collection()
 	objID, err := primitive.ObjectIDFromHex(id)
 
 	if err != nil {
@@ -135,19 +127,4 @@ func (dvs *DishVoteService) FindOne(id string) (*model.DishVote, error) {
 	dishVote := model.DishVote{}
 	decodeErr := result.Decode(&dishVote)
 	return &dishVote, decodeErr
-}
-
-func (dvs *DishVoteService) Count(
-	keyword *string) (int64, error) {
-	collection := shared.Init("DishVotes")
-	filter := bson.D{{Key: "deleted", Value: false}}
-	if keyword != nil {
-		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: keyword}}})
-	}
-	total, err := collection.CountDocuments(context.TODO(), filter)
-	if err != nil {
-		return 0, err
-	}
-
-	return total, err
 }
