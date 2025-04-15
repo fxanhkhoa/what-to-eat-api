@@ -68,6 +68,7 @@ type CreateDishDto struct {
 }
 
 type UpdateDishDto struct {
+	ID                   string               `json:"_id" bson:"_id,omitempty"`
 	Slug                 string               `json:"slug" bson:"slug"`
 	Title                []*MultiLanguage     `json:"title" bson:"title"`
 	ShortDescription     []*MultiLanguage     `json:"shortDescription" bson:"shortDescription"`

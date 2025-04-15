@@ -94,7 +94,7 @@ func (ds *DishService) Update(updateDishInput model.UpdateDishDto, profile *mode
 	return &dish, decodeErr
 }
 
-func (ds *DishService) Remove(slug string, profile *model.User) (*model.Dish, error) {
+func (ds *DishService) Remove(slug string, profile *model.JwtCustomClaims) (*model.Dish, error) {
 	collection := ds.Collection()
 	now := time.Now()
 	filter := bson.M{"slug": slug, "deleted": false}

@@ -166,3 +166,44 @@ func (dc *DishController) FindRandom(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, dishes)
 }
+
+func (dc *DishController) Create(c echo.Context) error {
+	var dto model.CreateDishDto
+	if err := c.Bind(&dto); err != nil {
+		return c.String(http.StatusBadRequest, err.Error())
+	}
+	var service = &service.DishService{}
+	claim := c.Get("CLAIM").(*model.JwtCustomClaims)
+	record, err := service.Create(dto, claim)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, record)
+}
+
+func (dc *DishController) Update(c echo.Context) error {
+	id := c.Param("id")
+	var dto model.UpdateDishDto
+	if err := c.Bind(&dto); err != nil {
+		return c.String(http.StatusBadRequest, err.Error())
+	}
+	dto.ID = id
+	var service = &service.DishService{}
+	claim := c.Get("CLAIM").(*model.JwtCustomClaims)
+	record, err := service.Update(dto, claim)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, record)
+}
+
+func (dc *DishController) Remove(c echo.Context) error {
+	id := c.Param("id")
+	var service = &service.DishService{}
+	claim := c.Get("CLAIM").(*model.JwtCustomClaims)
+	record, err := service.Remove(id, claim)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, record)
+}

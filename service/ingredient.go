@@ -87,7 +87,7 @@ func (is *IngredientService) Update(updateIngredientInput model.UpdateIngredient
 	return &ingredient, decodeErr
 }
 
-func (is *IngredientService) Remove(slug string, profile *model.User) (*model.Ingredient, error) {
+func (is *IngredientService) Remove(slug string, profile *model.JwtCustomClaims) (*model.Ingredient, error) {
 	collection := is.Collection()
 	now := time.Now()
 	filter := bson.M{"slug": slug, "deleted": false}

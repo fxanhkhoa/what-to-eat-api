@@ -46,6 +46,7 @@ type CreateIngredientDto struct {
 }
 
 type UpdateIngredientDto struct {
+	ID                 string           `json:"_id" bson:"_id,omitempty"`
 	Slug               string           `json:"slug" bson:"slug"`
 	Title              []*MultiLanguage `json:"title" bson:"title"`
 	Measure            *string          `json:"measure,omitempty" bson:"measure"`

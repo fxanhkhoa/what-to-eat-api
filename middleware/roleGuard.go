@@ -28,6 +28,7 @@ func (rg *RoleGuard) RoleGuard(permissions []string) echo.MiddlewareFunc {
 			rs := service.RolePermissionService{}
 			claims := c.Get("CLAIM").(*model.JwtCustomClaims)
 			foundRole, err := rs.FindByName(claims.RoleName)
+
 			if err != nil {
 				fmt.Println(err.Error())
 				return echo.ErrForbidden
@@ -56,7 +57,7 @@ func (rg *RoleGuard) Permission(permissions []string) echo.HandlerFunc {
 
 		rs := service.RolePermissionService{}
 		claims := c.Get("CLAIM").(*model.JwtCustomClaims)
-		foundRole, err := rs.FindByName(claims.Name)
+		foundRole, err := rs.FindByName(claims.RoleName)
 		if err != nil {
 			return echo.ErrForbidden
 		}

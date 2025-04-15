@@ -3,21 +3,13 @@ package service
 import (
 	"context"
 	"log"
-	"os"
 	"time"
+	"what-to-eat/be/config"
 	"what-to-eat/be/firebase"
 	"what-to-eat/be/model"
 
 	"github.com/golang-jwt/jwt/v5"
 )
-
-type CustomClaim struct {
-	Email    string `json:"email"`
-	GoogleID string `json:"google_id"`
-	GithubID string `json:"github_id"`
-	RoleName string `json:"role_name"`
-	jwt.RegisteredClaims
-}
 
 type AuthService struct{}
 
@@ -61,13 +53,13 @@ func (a *AuthService) Login(idToken string) (*model.TokenResult, error) {
 }
 
 func (a *AuthService) GenerateRefreshToken(user model.User) (string, error) {
-	expireHourRefreshStr := os.Getenv("JWT_EXPIRED_REFRESH")
-	secretKey := os.Getenv("SECRET_KEY")
+	expireHourRefreshStr := config.GetInstanceConfig().JWTRefreshExpired
+	secretKey := config.GetInstanceConfig().JWTSecret
 	expireHour, errParse := time.ParseDuration(expireHourRefreshStr)
 	if errParse != nil {
 		return "", errParse
 	}
-	claims := CustomClaim{
+	claims := model.JwtCustomClaims{
 		Email:    user.Email,
 		GoogleID: *new(string),
 		GithubID: *new(string),
@@ -92,21 +84,21 @@ func (a *AuthService) GenerateRefreshToken(user model.User) (string, error) {
 }
 
 func (a *AuthService) GenerateToken(refreshToken string) (string, error) {
-	expireHourStr := os.Getenv("JWT_EXPIRED")
-	secretKey := os.Getenv("SECRET_KEY")
+	expireHourStr := config.GetInstanceConfig().JWTExpired
+	secretKey := config.GetInstanceConfig().JWTSecret
 	expireHour, err := time.ParseDuration(expireHourStr)
 	if err != nil {
 		return "", err
 	}
 
-	token, err := jwt.ParseWithClaims(refreshToken, &CustomClaim{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(refreshToken, &model.JwtCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secretKey), nil
 	})
 
 	if err != nil {
 		log.Println(err)
 		return "", err
-	} else if claims, ok := token.Claims.(*CustomClaim); ok {
+	} else if claims, ok := token.Claims.(*model.JwtCustomClaims); ok {
 		user, err := NewUserService().FindByID(claims.ID)
 
 		if err != nil {
@@ -122,7 +114,7 @@ func (a *AuthService) GenerateToken(refreshToken string) (string, error) {
 			user.GoogleID = new(string)
 		}
 
-		newClaim := CustomClaim{
+		newClaim := model.JwtCustomClaims{
 			Email:    claims.Email,
 			GoogleID: *user.GoogleID,
 			GithubID: *user.GithubID,

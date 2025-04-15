@@ -44,6 +44,9 @@ func main() {
 		return c.String(http.StatusOK, "OK")
 	})
 
+	authGroup := e.Group("/auth")
+	router.UseAuthGroup(authGroup)
+
 	userGroup := e.Group("/user")
 	router.UseUserGroup(userGroup)
 

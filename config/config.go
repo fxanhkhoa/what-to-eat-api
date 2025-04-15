@@ -3,15 +3,14 @@ package config
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"sync"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	JWTExpired        int
-	JWTRefreshExpired int
+	JWTExpired        string
+	JWTRefreshExpired string
 	JWTSecret         string
 }
 
@@ -41,7 +40,7 @@ func (cf *Config) Init() {
 		fmt.Print(err)
 	}
 
-	cf.JWTExpired, _ = strconv.Atoi(os.Getenv("JWT_EXPIRED"))
-	cf.JWTRefreshExpired, _ = strconv.Atoi(os.Getenv("JWT_REFRESH_EXPIRED"))
+	cf.JWTExpired = os.Getenv("JWT_EXPIRED")
+	cf.JWTRefreshExpired = os.Getenv("JWT_REFRESH_EXPIRED")
 	cf.JWTSecret = os.Getenv("JWT_SECRET")
 }
