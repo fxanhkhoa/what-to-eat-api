@@ -59,5 +59,8 @@ func main() {
 	dishVoteGroup := e.Group("/dishVote")
 	router.UseDishVoteRouter(dishVoteGroup)
 
+	rolePermissionGroup := e.Group("/authorization")
+	router.UseRolePermissionRouter(rolePermissionGroup)
+
 	e.Logger.Fatal(e.Start(":" + port))
 }
