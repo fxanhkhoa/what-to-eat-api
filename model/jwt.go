@@ -7,6 +7,7 @@ type JwtCustomClaims struct {
 	GoogleID string `json:"google_id"`
 	GithubID string `json:"github_id"`
 	RoleName string `json:"role_name"`
+	Name     string `json:"name"`
 	jwt.RegisteredClaims
 }
 

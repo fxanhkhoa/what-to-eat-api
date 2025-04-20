@@ -119,6 +119,7 @@ func (a *AuthService) GenerateToken(refreshToken string) (string, error) {
 			GoogleID: *user.GoogleID,
 			GithubID: *user.GithubID,
 			RoleName: user.RoleName,
+			Name:     *user.Name,
 			RegisteredClaims: jwt.RegisteredClaims{
 				ExpiresAt: jwt.NewNumericDate(time.Now().Add(expireHour)),
 				IssuedAt:  jwt.NewNumericDate(time.Now()),

@@ -3,9 +3,10 @@ package model
 import "time"
 
 type IngredientsInDish struct {
-	Quantity float64 `json:"quantity" bson:"quantity"`
-	Slug     string  `json:"slug" bson:"slug"`
-	Note     *string `json:"note,omitempty" bson:"note"`
+	Quantity     float64 `json:"quantity" bson:"quantity"`
+	Slug         string  `json:"slug" bson:"slug"`
+	Note         *string `json:"note,omitempty" bson:"note"`
+	IngredientId string  `json:"ingredientId" bson:"ingredientId"`
 }
 
 type QueryDishDto struct {
