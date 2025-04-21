@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -63,7 +62,7 @@ func (dc *DishController) Find(c echo.Context) error {
 	}
 
 	cookingTimeFromStr := c.QueryParam("cookingTimeFrom")
-	if cookingTimeFromStr == "" {
+	if cookingTimeFromStr != "" {
 		num, err := strconv.Atoi(cookingTimeFromStr)
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
@@ -119,8 +118,6 @@ func (dc *DishController) Find(c echo.Context) error {
 		c.String(http.StatusInternalServerError, err.Error())
 		return err
 	}
-
-	fmt.Println(dishes)
 
 	return c.JSON(http.StatusOK, helper.PaginationObject{
 		Data:  dishes,
