@@ -3,7 +3,6 @@ package controller
 import (
 	"net/http"
 	"strconv"
-	"strings"
 	"what-to-eat/be/helper"
 	"what-to-eat/be/model"
 	"what-to-eat/be/service"
@@ -81,36 +80,22 @@ func (dc *DishController) Find(c echo.Context) error {
 		query.CookingTimeTo = &num
 	}
 
-	difficultLevelStr := c.QueryParam("difficultLevels")
-	if difficultLevelStr != "" {
-		difficultLevels := strings.Split(difficultLevelStr, ",")
-		query.DifficultLevels = &difficultLevels
-	}
+	q := c.Request().URL.Query()
 
-	mealCategoriesStr := c.QueryParam("mealCategories")
-	if mealCategoriesStr != "" {
-		mealCategories := strings.Split(mealCategoriesStr, ",")
-		query.MealCategories = &mealCategories
-	}
+	difficultLevels := q["difficultLevels"]
+	query.DifficultLevels = &difficultLevels
 
-	ingredientCategoriesStr := c.QueryParam("ingredientCategories")
-	if ingredientCategoriesStr != "" {
-		ingredientCategories := strings.Split(ingredientCategoriesStr, ",")
-		query.IngredientCategories = &ingredientCategories
-	}
+	mealCategories := q["mealCategories"]
+	query.MealCategories = &mealCategories
 
-	ingredientsStr := c.QueryParam("ingredients")
-	if ingredientsStr != "" {
-		result := strings.Split(ingredientsStr, ",")
-		query.Ingredients = &result
-	}
+	ingredientCategories := q["ingredientCategories"]
+	query.IngredientCategories = &ingredientCategories
 
-	labelStr := c.QueryParam("labels")
-	var labels []string
-	if labelStr != "" {
-		labels = strings.Split(labelStr, ",")
-		query.Labels = &labels
-	}
+	ingredients := q["ingredients"]
+	query.Ingredients = &ingredients
+
+	labels := q["labels"]
+	query.Labels = &labels
 
 	dishService := &service.DishService{}
 	dishes, count, err := dishService.Find(query)

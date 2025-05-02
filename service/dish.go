@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 	"what-to-eat/be/config"
@@ -9,6 +10,7 @@ import (
 	"what-to-eat/be/model"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -66,7 +68,12 @@ func (ds *DishService) Update(updateDishInput model.UpdateDishDto, profile *mode
 
 	var dish model.Dish
 
-	filter := bson.M{"slug": updateDishInput.Slug, "deleted": false}
+	objectID, err := primitive.ObjectIDFromHex(updateDishInput.ID)
+	if err != nil {
+		return nil, errors.New("invalid ID format")
+	}
+
+	filter := bson.M{"_id": objectID, "deleted": false}
 	options := options.FindOneAndUpdate().SetReturnDocument(options.After).SetUpsert(true)
 	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": bson.D{
 		{Key: "slug", Value: updateDishInput.Slug},
@@ -94,10 +101,16 @@ func (ds *DishService) Update(updateDishInput model.UpdateDishDto, profile *mode
 	return &dish, decodeErr
 }
 
-func (ds *DishService) Remove(slug string, profile *model.JwtCustomClaims) (*model.Dish, error) {
+func (ds *DishService) Remove(id string, profile *model.JwtCustomClaims) (*model.Dish, error) {
 	collection := ds.Collection()
 	now := time.Now()
-	filter := bson.M{"slug": slug, "deleted": false}
+
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, errors.New("invalid ID format")
+	}
+
+	filter := bson.M{"_id": objectID, "deleted": false}
 	options := options.FindOneAndUpdate().SetReturnDocument(options.After)
 	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": bson.M{
 		"deleted":   true,
@@ -163,7 +176,13 @@ func (ds *DishService) Find(query model.QueryDishDto) ([]*model.Dish, int64, err
 
 func (ds *DishService) FindOne(id string) (*model.Dish, error) {
 	collection := ds.Collection()
-	filter := bson.M{"_id": id}
+
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, errors.New("invalid ID format")
+	}
+
+	filter := bson.M{"_id": objectID}
 	result := collection.FindOne(context.TODO(), filter)
 	if result.Err() != nil {
 		return nil, result.Err()

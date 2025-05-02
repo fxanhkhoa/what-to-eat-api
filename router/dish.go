@@ -13,9 +13,9 @@ func UseDishRouter(group *echo.Group) {
 	rG := middleware.NewRoleGuard()
 	controller := &controllers.DishController{}
 	group.GET("/", controller.Find)
-	group.GET("/:id", controller.FindOne)
-	group.GET("/slug/:slug", controller.FindOneBySlug)
+	group.GET("/:id/", controller.FindOne)
+	group.GET("/slug/:slug/", controller.FindOneBySlug)
 	group.POST("/", controller.Create, aG.AuthGuard, rG.RoleGuard([]string{constants.CREATE_DISH}))
-	group.PATCH("/:id", controller.Update, aG.AuthGuard, rG.RoleGuard([]string{constants.UPDATE_DISH}))
-	group.DELETE("/:id", controller.Remove, aG.AuthGuard, rG.RoleGuard([]string{constants.REMOVE_DISH}))
+	group.PATCH("/:id/", controller.Update, aG.AuthGuard, rG.RoleGuard([]string{constants.UPDATE_DISH}))
+	group.DELETE("/:id/", controller.Remove, aG.AuthGuard, rG.RoleGuard([]string{constants.REMOVE_DISH}))
 }
