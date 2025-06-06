@@ -13,7 +13,8 @@ func UseIngredientRouter(group *echo.Group) {
 	rG := middleware.NewRoleGuard()
 	controller := &controllers.IngredientController{}
 	group.GET("/", controller.Find)
-	group.GET("/byTitleLang", controller.FindOneByTitleLang)
+	group.GET("/random/", controller.FindRandom)
+	group.GET("/byTitleLang/", controller.FindOneByTitleLang)
 	group.GET("/:id/", controller.FindOne)
 	group.GET("/slug/:slug/", controller.FindOneBySlug)
 	group.POST("/", controller.Create, aG.AuthGuard, rG.RoleGuard([]string{constants.CREATE_INGREDIENT}))

@@ -43,6 +43,23 @@ func (ic *IngredientController) Find(c echo.Context) error {
 		Count: count})
 }
 
+func (ic *IngredientController) FindRandom(c echo.Context) error {
+
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || limit < 0 {
+		limit = 10
+	}
+
+	s := &service.IngredientService{}
+	dishes, err := s.Random(&limit)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return err
+	}
+
+	return c.JSON(http.StatusOK, dishes)
+}
+
 func (ic *IngredientController) FindOne(c echo.Context) error {
 	id := c.Param("id")
 	service := &service.IngredientService{}

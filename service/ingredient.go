@@ -188,3 +188,21 @@ func (is *IngredientService) FindTitleByLang(title string, lang string) (*model.
 	}
 	return &ingredient, decodeErr
 }
+
+func (is *IngredientService) Random(limit *int) ([]*model.Ingredient, error) {
+	collection := is.Collection()
+	stages := []bson.D{}
+	stages = append(stages, bson.D{{Key: "$match", Value: bson.D{{Key: "deleted", Value: false}}}})
+	stages = append(stages, bson.D{{Key: "$sample", Value: bson.D{{Key: "size", Value: int64(*limit)}}}})
+	cursor, err := collection.Aggregate(context.TODO(), stages)
+	if err != nil {
+		return nil, err
+	}
+
+	var records []*model.Ingredient
+	if err = cursor.All(context.TODO(), &records); err != nil {
+		log.Println(err)
+	}
+	defer cursor.Close(context.TODO())
+	return records, err
+}
