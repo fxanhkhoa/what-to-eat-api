@@ -31,6 +31,11 @@ func (ic *IngredientController) Find(c echo.Context) error {
 		query.Keyword = &keyword
 	}
 
+	q := c.Request().URL.Query()
+
+	ingredientCategories := q["ingredientCategory"]
+	query.IngredientCategory = &ingredientCategories
+
 	s := &service.IngredientService{}
 
 	ingredients, count, err := s.Find(query)
@@ -50,8 +55,12 @@ func (ic *IngredientController) FindRandom(c echo.Context) error {
 		limit = 10
 	}
 
+	q := c.Request().URL.Query()
+
+	ingredientCategories := q["ingredientCategory"]
+
 	s := &service.IngredientService{}
-	dishes, err := s.Random(&limit)
+	dishes, err := s.Random(&limit, &ingredientCategories)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return err

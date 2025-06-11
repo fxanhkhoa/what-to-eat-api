@@ -126,6 +126,10 @@ func (is *IngredientService) Find(query model.QueryIngredientDto) ([]*model.Ingr
 		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: *query.Keyword}}})
 	}
 
+	if query.IngredientCategory != nil && len(*query.IngredientCategory) > 0 {
+		filter = append(filter, bson.E{Key: "ingredientCategory", Value: bson.D{{Key: "$in", Value: query.IngredientCategory}}})
+	}
+
 	count, err := collection.CountDocuments(context.TODO(), filter)
 	if err != nil {
 		return nil, 0, err
@@ -189,11 +193,15 @@ func (is *IngredientService) FindTitleByLang(title string, lang string) (*model.
 	return &ingredient, decodeErr
 }
 
-func (is *IngredientService) Random(limit *int) ([]*model.Ingredient, error) {
+func (is *IngredientService) Random(limit *int, ingredientCategory *[]string) ([]*model.Ingredient, error) {
 	collection := is.Collection()
 	stages := []bson.D{}
 	stages = append(stages, bson.D{{Key: "$match", Value: bson.D{{Key: "deleted", Value: false}}}})
+	if ingredientCategory != nil && len(*ingredientCategory) > 0 {
+		stages = append(stages, bson.D{{Key: "$match", Value: bson.D{{Key: "ingredientCategory", Value: bson.D{{Key: "$in", Value: *ingredientCategory}}}}}})
+	}
 	stages = append(stages, bson.D{{Key: "$sample", Value: bson.D{{Key: "size", Value: int64(*limit)}}}})
+
 	cursor, err := collection.Aggregate(context.TODO(), stages)
 	if err != nil {
 		return nil, err

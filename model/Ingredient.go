@@ -27,7 +27,8 @@ type Ingredient struct {
 
 type QueryIngredientDto struct {
 	BaseDto
-	Keyword *string `json:"keyword"`
+	Keyword            *string   `json:"keyword"`
+	IngredientCategory *[]string `json:"ingredientCategory" bson:"ingredientCategory"`
 }
 
 type CreateIngredientDto struct {
