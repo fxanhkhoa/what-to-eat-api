@@ -62,5 +62,8 @@ func main() {
 	rolePermissionGroup := e.Group("/authorization")
 	router.UseRolePermissionRouter(rolePermissionGroup)
 
+	contactGroup := e.Group("/contact")
+	router.UseContactRouter(contactGroup)
+
 	e.Logger.Fatal(e.Start(":" + port))
 }

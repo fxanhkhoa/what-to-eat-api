@@ -67,10 +67,11 @@ func (d *MongoDB) InitializeMongoDB() {
 	dbName := os.Getenv("DATABASE_NAME")
 	d.DbName = dbName
 
-	d.indexUserCollection()
-	d.indexRoleCollection()
-	d.indexIngredientCollection()
-	d.indexDishCollection()
+	d.IndexUserCollection()
+	d.IndexRoleCollection()
+	d.IndexIngredientCollection()
+	d.IndexDishCollection()
+	d.IndexContactCollection()
 }
 
 func (d *MongoDB) GetDbName() string {
@@ -81,7 +82,7 @@ func (d *MongoDB) GetClient() *mongo.Client {
 	return d.Client
 }
 
-func (d *MongoDB) indexUserCollection() {
+func (d *MongoDB) IndexUserCollection() {
 	indexModel := mongo.IndexModel{
 		Keys: bson.D{{Key: "name", Value: "text"}},
 	}
@@ -103,7 +104,7 @@ func (d *MongoDB) indexUserCollection() {
 	log.Printf("Created Index Users: %s \n", name)
 }
 
-func (d *MongoDB) indexRoleCollection() {
+func (d *MongoDB) IndexRoleCollection() {
 	indexModel := mongo.IndexModel{
 		Keys:    bson.D{{Key: "name", Value: 1}},
 		Options: options.Index().SetUnique(true),
@@ -122,7 +123,7 @@ func (d *MongoDB) indexRoleCollection() {
 	log.Printf("Created Index RolePermissions: %s \n", name)
 }
 
-func (d *MongoDB) indexIngredientCollection() {
+func (d *MongoDB) IndexIngredientCollection() {
 	indexModel := mongo.IndexModel{
 		Keys:    bson.D{{Key: "title.data", Value: "text"}},
 		Options: options.Index().SetDefaultLanguage("en"),
@@ -147,7 +148,7 @@ func (d *MongoDB) indexIngredientCollection() {
 	log.Printf("Created Index Ingredients: %s \n", name)
 }
 
-func (d *MongoDB) indexDishCollection() {
+func (d *MongoDB) IndexDishCollection() {
 	indexModel := mongo.IndexModel{
 		Keys:    bson.D{{Key: "title.data", Value: "text"}},
 		Options: options.Index().SetDefaultLanguage("en"),
@@ -175,4 +176,23 @@ func (d *MongoDB) indexDishCollection() {
 	}
 
 	log.Printf("Created Index Dishes: %s \n", name)
+}
+
+func (d *MongoDB) IndexContactCollection() {
+	indexModel := mongo.IndexModel{
+		Keys:    bson.D{{Key: "name", Value: "text"}, {Key: "message", Value: "text"}},
+		Options: options.Index().SetDefaultLanguage("en"),
+	}
+
+	collection := d.Client.Database(d.DbName).Collection("Contacts")
+	name, err := collection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+		indexModel,
+	})
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	log.Printf("Created Index Contacts: %s \n", name)
 }
