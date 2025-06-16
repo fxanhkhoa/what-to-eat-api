@@ -1,4 +1,4 @@
-FROM golang:1.20-buster as builder
+FROM golang:1.23-alpine as builder
 
 WORKDIR /app
 
@@ -19,5 +19,5 @@ RUN set -x && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -
 COPY --from=builder /app/server /app/server
 
 # Run the web service on container startup.
-EXPOSE 5099
+EXPOSE 1323
 CMD ["/app/server"]
