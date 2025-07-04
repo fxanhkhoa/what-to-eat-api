@@ -133,14 +133,21 @@ func (dc *DishController) FindOneBySlug(c echo.Context) error {
 }
 
 func (dc *DishController) FindRandom(c echo.Context) error {
-
+	var query model.QueryDishRandomDto
 	limit, err := strconv.Atoi(c.QueryParam("limit"))
-	if err != nil || limit < 0 {
-		limit = 10
+	if err != nil || query.Limit < 0 {
+		query.Limit = 10
+	} else {
+		query.Limit = limit
 	}
 
+	q := c.Request().URL.Query()
+
+	mealCategories := q["mealCategories"]
+	query.MealCategories = &mealCategories
+
 	s := &service.DishService{}
-	dishes, err := s.Random(&limit)
+	dishes, err := s.Random(query)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return err

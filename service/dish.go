@@ -204,11 +204,15 @@ func (ds *DishService) FindOneBySlug(slug string) (*model.Dish, error) {
 	return &dish, decodeErr
 }
 
-func (ds *DishService) Random(limit *int) ([]*model.Dish, error) {
+func (ds *DishService) Random(query model.QueryDishRandomDto) ([]*model.Dish, error) {
 	collection := ds.Collection()
 	stages := []bson.D{}
-	stages = append(stages, bson.D{{Key: "$match", Value: bson.D{{Key: "deleted", Value: false}}}})
-	stages = append(stages, bson.D{{Key: "$sample", Value: bson.D{{Key: "size", Value: int64(*limit)}}}})
+	matchStage := bson.D{{Key: "deleted", Value: false}}
+	if query.MealCategories != nil && len(*query.MealCategories) > 0 {
+		matchStage = append(matchStage, bson.E{Key: "mealCategories", Value: bson.D{{Key: "$in", Value: query.MealCategories}}})
+	}
+	stages = append(stages, bson.D{{Key: "$match", Value: matchStage}})
+	stages = append(stages, bson.D{{Key: "$sample", Value: bson.D{{Key: "size", Value: int64(query.Limit)}}}})
 	cursor, err := collection.Aggregate(context.TODO(), stages)
 	if err != nil {
 		return nil, err
