@@ -7,6 +7,7 @@ import (
 	"what-to-eat/be/config"
 	"what-to-eat/be/firebase"
 	"what-to-eat/be/router"
+	"what-to-eat/be/socketio"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo-contrib/echoprometheus"
@@ -44,26 +45,8 @@ func main() {
 		return c.String(http.StatusOK, "OK")
 	})
 
-	authGroup := e.Group("/auth")
-	router.UseAuthGroup(authGroup)
-
-	userGroup := e.Group("/user")
-	router.UseUserGroup(userGroup)
-
-	dishGroup := e.Group("/dish")
-	router.UseDishRouter(dishGroup)
-
-	ingredientGroup := e.Group("/ingredient")
-	router.UseIngredientRouter(ingredientGroup)
-
-	dishVoteGroup := e.Group("/dishVote")
-	router.UseDishVoteRouter(dishVoteGroup)
-
-	rolePermissionGroup := e.Group("/authorization")
-	router.UseRolePermissionRouter(rolePermissionGroup)
-
-	contactGroup := e.Group("/contact")
-	router.UseContactRouter(contactGroup)
+	router.InitializeRoutes(e)
+	socketio.InitializeSocketIO(e)
 
 	e.Logger.Fatal(e.Start(":" + port))
 }

@@ -7,6 +7,7 @@ type DishVoteItem struct {
 	VoteUser      []*string `json:"voteUser" bson:"voteUser"`
 	VoteAnonymous []*string `json:"voteAnonymous" bson:"voteAnonymous"`
 	IsCustom      bool      `json:"isCustom" bson:"isCustom"`
+	CustomTitle   string    `json:"customTitle" bson:"customTitle"`
 }
 
 type QueryDishVoteDto struct {

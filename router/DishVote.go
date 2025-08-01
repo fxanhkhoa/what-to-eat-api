@@ -11,9 +11,8 @@ import (
 func UseDishVoteRouter(group *echo.Group) {
 	aG := middleware.NewAuthGuard()
 	rG := middleware.NewRoleGuard()
-	group.Use(aG.AuthGuard)
 	controller := &controllers.DishVoteController{}
-	group.GET("/", controller.Find, rG.RoleGuard([]string{constants.FIND_ALL_INGREDIENT}))
-	group.GET("/:id", controller.FindOne, rG.RoleGuard([]string{constants.FIND_ONE_INGREDIENT}))
-	// group.POST("/", controller.Create, aG.AuthGuard, rG.RoleGuard([]string{constants.CREATE_DISH}))
+	group.GET("/", controller.Find, aG.AuthGuard, rG.RoleGuard([]string{constants.FIND_ALL_DISH_VOTE}))
+	group.GET("/:id/", controller.FindOne, aG.AuthGuard, rG.RoleGuard([]string{constants.FIND_ONE_DISH_VOTE}))
+	group.POST("/", controller.Create, aG.AuthGuard, rG.RoleGuard([]string{constants.CREATE_DISH_VOTE}))
 }
