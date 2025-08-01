@@ -70,7 +70,7 @@ func ProcessDishVoteUpdate(data ...any) (*model.DishVote, model.SocketioJoinRoom
 	updated, err := dishVoteService.Update(updateDishVote, nil)
 
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Printf("Error updating dish vote: %v", err)
 	}
 
 	return updated, socketioJoinRoomData
