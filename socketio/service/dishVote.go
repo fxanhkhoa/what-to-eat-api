@@ -5,32 +5,33 @@ import (
 	"fmt"
 	"what-to-eat/be/model"
 	"what-to-eat/be/service"
+	"log"
 )
 
 func ProcessDishVoteUpdate(data ...any) (*model.DishVote, model.SocketioJoinRoom) {
 	jsonStr, err := json.Marshal(data[0])
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("Error marshaling data[0] to JSON: %v", err)
 	}
 	var input model.SocketioDishVoteUpdate
 	if err := json.Unmarshal(jsonStr, &input); err != nil {
-		fmt.Println(err)
+		log.Printf("Error unmarshaling JSON to SocketioDishVoteUpdate: %v", err)
 	}
 
 	jsonStrRoom, err := json.Marshal(data[1])
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("Error marshaling data[1] to JSON: %v", err)
 	}
 	var socketioJoinRoomData model.SocketioJoinRoom
 	if err := json.Unmarshal(jsonStrRoom, &socketioJoinRoomData); err != nil {
-		fmt.Println(err)
+		log.Printf("Error unmarshaling JSON to SocketioJoinRoom: %v", err)
 	}
 
 	var dishVoteService service.DishVoteService
 
 	dishVote, err := dishVoteService.FindOne(socketioJoinRoomData.RoomID)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Printf("Error finding DishVote with RoomID %s: %v", socketioJoinRoomData.RoomID, err)
 	}
 
 	updateDishVote := model.UpdateDishVoteDto{
