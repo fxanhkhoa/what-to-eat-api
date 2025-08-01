@@ -19,11 +19,11 @@ func InitializeSocketIO(e *echo.Echo) *socket.Server {
 		client.On("join-room", func(datas ...any) {
 			jsonStr, err := json.Marshal(datas[0])
 			if err != nil {
-				fmt.Println(err)
+				fmt.Printf("Failed to marshal join-room data: %v\n", err)
 			}
 			var socketioJoinRoomData model.SocketioJoinRoom
 			if err := json.Unmarshal(jsonStr, &socketioJoinRoomData); err != nil {
-				fmt.Println(err)
+				fmt.Printf("Failed to unmarshal join-room data: %v\n", err)
 			}
 
 			client.Join(socket.Room(socketioJoinRoomData.RoomID))
