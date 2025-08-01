@@ -1,23 +1,56 @@
-FROM golang:1.23-alpine as builder
+# Build stage
+FROM golang:1.23-alpine AS builder
 
-WORKDIR /app
+# Install git and ca-certificates (needed for private repos and HTTPS)
+RUN apk add --no-cache git ca-certificates tzdata
 
-COPY go.mod ./
-COPY go.sum ./
+# Create appuser for security
+RUN adduser -D -g '' appuser
+
+# Set working directory
+WORKDIR /build
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+
+# Download dependencies
 RUN go mod download
+RUN go mod verify
 
-COPY ./ ./
+# Copy source code
+COPY . .
 
-RUN go build -v -o server
+# Build the binary with optimizations
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags='-w -s -extldflags "-static"' \
+    -a -installsuffix cgo \
+    -o app .
 
-FROM debian:buster-slim
-RUN set -x && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+# Final stage - minimal runtime image
+FROM scratch
 
-# Copy the binary to the production image from the builder stage.
-COPY --from=builder /app/server /app/server
+# Import from builder
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /etc/passwd /etc/passwd
 
-# Run the web service on container startup.
-EXPOSE 1323
-CMD ["/app/server"]
+# Copy the binary
+COPY --from=builder /build/app /app
+
+# Use non-root user
+USER appuser
+
+# Expose port (adjust as needed)
+EXPOSE 8080
+
+# Add metadata
+LABEL maintainer="fxanhkhoa@gmail.com"
+LABEL description="What To Eat - Backend Service"
+LABEL version="1.0"
+
+# Health check (optional - adjust endpoint as needed)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["/app", "health"] || exit 1
+
+# Run the binary
+ENTRYPOINT ["/app"]

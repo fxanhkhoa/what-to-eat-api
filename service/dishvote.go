@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 	"what-to-eat/be/config"
@@ -22,7 +23,7 @@ func (dvs *DishVoteService) Collection() *mongo.Collection {
 	return col
 }
 
-func (dvs *DishVoteService) Create(createDishVoteInput model.CreateDishVoteDto, profile *model.JwtCustomClaims) (*mongo.InsertOneResult, error) {
+func (dvs *DishVoteService) Create(createDishVoteInput model.CreateDishVoteDto, profile *model.JwtCustomClaims) (*model.DishVote, error) {
 	collection := dvs.Collection()
 
 	now := time.Now()
@@ -42,24 +43,34 @@ func (dvs *DishVoteService) Create(createDishVoteInput model.CreateDishVoteDto, 
 	if err != nil {
 		return nil, err
 	}
-	return result, nil
+	dishVote.ID = result.InsertedID.(primitive.ObjectID).Hex()
+	return &dishVote, nil
 }
 
 func (dvs *DishVoteService) Update(updateDishVoteInput model.UpdateDishVoteDto, profile *model.JwtCustomClaims) (*model.DishVote, error) {
 	collection := dvs.Collection()
 
 	now := time.Now()
+	objectID, err := primitive.ObjectIDFromHex(updateDishVoteInput.ID)
+	if err != nil {
+		return nil, errors.New("invalid ID format")
+	}
 
 	var dishVote model.DishVote
 
-	filter := bson.M{"_id": updateDishVoteInput.ID, "deleted": false}
+	updatedBy := ""
+	if profile != nil {
+		updatedBy = profile.ID
+	}
+
+	filter := bson.M{"_id": objectID, "deleted": false}
 	options := options.FindOneAndUpdate().SetReturnDocument(options.After).SetUpsert(true)
 	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": bson.D{
 		{Key: "title", Value: updateDishVoteInput.Title},
 		{Key: "description", Value: updateDishVoteInput.Description},
 		{Key: "dishVoteItems", Value: updateDishVoteInput.DishVoteItems},
 		{Key: "updatedAt", Value: now},
-		{Key: "updatedBy", Value: profile.ID},
+		{Key: "updatedBy", Value: updatedBy},
 	}}, options)
 	if result.Err() != nil {
 		return nil, result.Err()
