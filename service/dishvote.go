@@ -40,7 +40,7 @@ func (dvs *DishVoteService) Create(createDishVoteInput model.CreateDishVoteDto, 
 	}
 
 	result, err := collection.InsertOne(context.TODO(), dishVote)
-	if err != nil && result == nil {
+	if err != nil {
 		return nil, err
 	}
 	dishVote.ID = result.InsertedID.(primitive.ObjectID).Hex()
