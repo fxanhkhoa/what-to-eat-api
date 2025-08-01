@@ -2,10 +2,9 @@ package socketio_service
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"what-to-eat/be/model"
 	"what-to-eat/be/service"
-	"log"
 )
 
 func ProcessDishVoteUpdate(data ...any) (*model.DishVote, model.SocketioJoinRoom) {
