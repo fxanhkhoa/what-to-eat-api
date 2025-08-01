@@ -51,7 +51,9 @@ func ProcessDishVoteUpdate(data ...any) (*model.DishVote, model.SocketioJoinRoom
 					break
 				}
 			}
-			dishVote.DishVoteItems[i].VoteAnonymous = append(dishVote.DishVoteItems[i].VoteAnonymous[:index], dishVote.DishVoteItems[i].VoteAnonymous[index+1:]...)
+			if index >= 0 {
+				dishVote.DishVoteItems[i].VoteAnonymous = append(dishVote.DishVoteItems[i].VoteAnonymous[:index], dishVote.DishVoteItems[i].VoteAnonymous[index+1:]...)
+			}
 		}
 
 		item := model.DishVoteItem{
