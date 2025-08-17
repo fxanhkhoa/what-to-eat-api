@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"google.golang.org/api/oauth2/v2"
 )
 
 type UserService struct{}
@@ -37,6 +38,32 @@ func (u *UserService) FindUserByUID(googleID string) (*model.User, error) {
 	}
 	err := result.Decode(&user)
 	return user, err
+}
+
+func (u *UserService) CreateUserWithGoogleFromOAuth(userInfo *oauth2.Userinfo) (*model.User, error) {
+	collection := u.Collection()
+	now := time.Now()
+	user := model.User{
+		Email:       userInfo.Email,
+		Name:        &userInfo.Name,
+		DateOfBirth: &now,
+		Phone:       nil,
+		GoogleID:    &userInfo.Id,
+		Avatar:      &userInfo.Picture,
+		Deleted:     false,
+		UpdatedAt:   &now,
+		CreatedAt:   &now,
+		RoleName:    "USER",
+	}
+
+	filter := bson.M{"GoogleID": user.GoogleID, "deleted": true}
+	options := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
+	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": user}, options)
+	if result.Err() != nil {
+		return nil, result.Err()
+	}
+	decodeErr := result.Decode(&user)
+	return &user, decodeErr
 }
 
 func (u *UserService) CreateUserWithGoogle(queriedUser *auth.UserRecord) (*model.User, error) {
