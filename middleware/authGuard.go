@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -49,8 +49,8 @@ func (aG *AuthGuard) AuthGuard(next echo.HandlerFunc) echo.HandlerFunc {
 			return []byte(config.GetInstanceConfig().JWTSecret), nil
 		})
 		if err != nil {
-			fmt.Print(err.Error())
-			return err
+			fmt.Print("Error parsing token: ", err.Error())
+			return echo.ErrUnauthorized
 		} else if claims, ok := token.Claims.(*model.JwtCustomClaims); ok {
 			c.Set("CLAIM", claims)
 			if err := next(c); err != nil {
@@ -59,7 +59,7 @@ func (aG *AuthGuard) AuthGuard(next echo.HandlerFunc) echo.HandlerFunc {
 
 			return nil
 		} else {
-			return errors.New("unknown claims type, cannot proceed")
+			return echo.NewHTTPError(http.StatusUnauthorized, "unknown claims type, cannot proceed")
 		}
 	}
 }

@@ -32,7 +32,8 @@ func (dc *DishVoteController) Find(c echo.Context) error {
 	}
 
 	s := &service.DishVoteService{}
-	dishes, count, err := s.Find(query)
+	claim := c.Get("CLAIM").(*model.JwtCustomClaims)
+	dishes, count, err := s.Find(query, claim)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return err
