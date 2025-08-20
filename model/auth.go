@@ -7,6 +7,14 @@ type LoginDto struct {
 	Type  string `json:"type" bson:"type" default:"google"` // 'google' or 'apple', default is 'google'
 }
 
+type RefreshTokenDto struct {
+	RefreshToken string `json:"refreshToken" bson:"refresh_token"`
+}
+
+type LogoutDto struct {
+	RefreshToken string `json:"refreshToken" bson:"refresh_token"`
+}
+
 // GoogleUserInfo represents the user info returned by Google OAuth2 API
 type GoogleUserInfo struct {
 	Sub           string `json:"sub"`

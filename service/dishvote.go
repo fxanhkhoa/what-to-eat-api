@@ -80,7 +80,7 @@ func (dvs *DishVoteService) Update(updateDishVoteInput model.UpdateDishVoteDto, 
 	return &dishVote, decodeErr
 }
 
-func (dvs *DishVoteService) Remove(id string, profile *model.User) (*model.DishVote, error) {
+func (dvs *DishVoteService) Remove(id string, profile *model.JwtCustomClaims) (*model.DishVote, error) {
 	collection := dvs.Collection()
 	now := time.Now()
 	filter := bson.M{"_id": id, "deleted": false}
@@ -98,12 +98,16 @@ func (dvs *DishVoteService) Remove(id string, profile *model.User) (*model.DishV
 	return &dishVote, decodeErr
 }
 
-func (dvs *DishVoteService) Find(query model.QueryDishVoteDto) ([]*model.DishVote, int64, error) {
+func (dvs *DishVoteService) Find(query model.QueryDishVoteDto, profile *model.JwtCustomClaims) ([]*model.DishVote, int64, error) {
 	collection := dvs.Collection()
 	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(query.Page) - 1) * int64(query.Limit)).SetLimit(int64(query.Limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
 	if query.Keyword != nil && *query.Keyword != "" {
 		filter = append(filter, bson.E{Key: "$text", Value: bson.D{{Key: "$search", Value: *query.Keyword}}})
+	}
+
+	if profile != nil && profile.RoleName != constants.ADMIN {
+		filter = append(filter, bson.E{Key: "createdBy", Value: profile.ID})
 	}
 
 	count, err := collection.CountDocuments(context.TODO(), filter)

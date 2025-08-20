@@ -15,6 +15,7 @@ import (
 	"what-to-eat/be/model"
 
 	"github.com/golang-jwt/jwt/v5"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
@@ -87,6 +88,40 @@ func (a *AuthService) Login(loginDto model.LoginDto) (*model.TokenResult, error)
 	data.RefreshToken = refreshToken
 
 	return &data, nil
+}
+
+func (a *AuthService) Logout(refreshToken string, profile *model.JwtCustomClaims) error {
+	// Parse the refresh token to get user ID
+	fmt.Println(refreshToken)
+	secretKey := config.GetInstanceConfig().JWTSecret
+	token, err := jwt.ParseWithClaims(refreshToken, &model.JwtRefreshCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secretKey), nil
+	})
+
+	if err != nil {
+		log.Println("Failed to parse refresh token:", err)
+		return err
+	}
+
+	if claims, ok := token.Claims.(*model.JwtRefreshCustomClaims); ok && token.Valid && claims.ID == profile.ID {
+		userID := claims.ID
+		userObjectID, err := primitive.ObjectIDFromHex(userID)
+		// Add the refresh token to the blacklist
+		service := NewRefreshTokenBlackListService()
+		_, err = service.Create(model.RefreshTokenBlackList{
+			Token:     refreshToken,
+			UserID:    userObjectID,
+			CreatedAt: time.Now(),
+		})
+		if err != nil {
+			log.Println("Failed to blacklist refresh token:", err)
+			return err
+		}
+		return nil
+	}
+
+	log.Println("Invalid refresh token claims")
+	return fmt.Errorf("invalid refresh token claims")
 }
 
 func (a *AuthService) verifyIdToken(idToken string) (*oauth2.Userinfo, error) {
@@ -294,6 +329,14 @@ func (a *AuthService) GenerateRefreshToken(user model.User) (string, error) {
 }
 
 func (a *AuthService) GenerateToken(refreshToken string) (string, error) {
+
+	refreshTokenBlackListService := NewRefreshTokenBlackListService()
+	blackList, _ := refreshTokenBlackListService.GetByToken(refreshToken)
+
+	if blackList != nil {
+		return "", fmt.Errorf("refresh token is blacklisted")
+	}
+
 	expireHourStr := config.GetInstanceConfig().JWTExpired
 	secretKey := config.GetInstanceConfig().JWTSecret
 	expireHour, err := time.ParseDuration(expireHourStr)
@@ -306,7 +349,7 @@ func (a *AuthService) GenerateToken(refreshToken string) (string, error) {
 	})
 
 	if err != nil {
-		log.Println(err)
+		log.Println("Failed to parse refresh token:", err)
 		return "", err
 	} else if claims, ok := token.Claims.(*model.JwtCustomClaims); ok {
 		user, err := NewUserService().FindByID(claims.ID)
