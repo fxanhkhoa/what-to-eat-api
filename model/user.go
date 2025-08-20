@@ -11,6 +11,7 @@ type User struct {
 	Phone       *string    `json:"phone,omitempty" bson:"phone"`
 	GoogleID    *string    `json:"googleID,omitempty" bson:"googleID"`
 	FacebookID  *string    `json:"facebookID,omitempty" bson:"facebookID"`
+	AppleID     *string    `json:"appleID,omitempty" bson:"appleID"`
 	GithubID    *string    `json:"githubID,omitempty" bson:"githubID"`
 	Avatar      *string    `json:"avatar,omitempty" bson:"avatar"`
 	Deleted     bool       `json:"deleted" bson:"deleted"`
@@ -41,6 +42,7 @@ type CreateUserDto struct {
 	Phone       *string    `json:"phone,omitempty" bson:"phone"`
 	GoogleID    *string    `json:"googleID,omitempty" bson:"googleID"`
 	FacebookID  *string    `json:"facebookID,omitempty" bson:"facebookID"`
+	AppleID     *string    `json:"appleID,omitempty" bson:"appleID"`
 	GithubID    *string    `json:"githubID,omitempty" bson:"githubID"`
 	Avatar      *string    `json:"avatar,omitempty" bson:"avatar"`
 }
@@ -54,6 +56,7 @@ type UpdateUserDto struct {
 	Phone       *string    `json:"phone,omitempty" bson:"phone"`
 	GoogleID    *string    `json:"googleID,omitempty" bson:"googleID"`
 	FacebookID  *string    `json:"facebookID,omitempty" bson:"facebookID"`
+	AppleID     *string    `json:"appleID,omitempty" bson:"appleID"`
 	GithubID    *string    `json:"githubID,omitempty" bson:"githubID"`
 	Avatar      *string    `json:"avatar,omitempty" bson:"avatar"`
 }

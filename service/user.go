@@ -66,6 +66,44 @@ func (u *UserService) CreateUserWithGoogleFromOAuth(userInfo *oauth2.Userinfo) (
 	return &user, decodeErr
 }
 
+func (u *UserService) FindUserByAppleID(appleID string) (*model.User, error) {
+	collection := u.Collection()
+	var user *model.User
+	filter := bson.M{"appleID": appleID}
+	result := collection.FindOne(context.TODO(), filter)
+	if result.Err() != nil {
+		return nil, result.Err()
+	}
+	err := result.Decode(&user)
+	return user, err
+}
+
+func (u *UserService) CreateUserWithAppleFromOAuth(userInfo *model.AppleUserInfo) (*model.User, error) {
+	collection := u.Collection()
+	now := time.Now()
+	user := model.User{
+		Email:       userInfo.Email,
+		Name:        &userInfo.Name,
+		DateOfBirth: &now,
+		Phone:       nil,
+		AppleID:     &userInfo.Sub,
+		Avatar:      nil, // Apple doesn't provide avatar in ID token
+		Deleted:     false,
+		UpdatedAt:   &now,
+		CreatedAt:   &now,
+		RoleName:    "USER",
+	}
+
+	filter := bson.M{"appleID": user.AppleID, "deleted": true}
+	options := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
+	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": user}, options)
+	if result.Err() != nil {
+		return nil, result.Err()
+	}
+	decodeErr := result.Decode(&user)
+	return &user, decodeErr
+}
+
 func (u *UserService) CreateUserWithGoogle(queriedUser *auth.UserRecord) (*model.User, error) {
 	collection := u.Collection()
 	now := time.Now()

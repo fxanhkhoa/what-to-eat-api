@@ -18,7 +18,7 @@ func (cr *AuthController) LoginWithGoogle(c echo.Context) error {
 	}
 
 	var service = &service.AuthService{}
-	result, err := service.Login(dto.Token)
+	result, err := service.Login(dto)
 	if err != nil {
 		return c.String(http.StatusUnauthorized, err.Error())
 	}
