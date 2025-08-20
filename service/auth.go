@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -21,26 +23,53 @@ import (
 type AuthService struct{}
 
 // Login verifies Google ID token and authenticates the user
-func (a *AuthService) Login(googleIdToken string) (*model.TokenResult, error) {
+func (a *AuthService) Login(loginDto model.LoginDto) (*model.TokenResult, error) {
 	var data model.TokenResult
+	var user *model.User
+	var err error
 
-	userInfo, err := a.verifyIdToken(googleIdToken)
-	if err != nil {
-		log.Println("Failed to verify ID token:", err)
-		return nil, err
-	}
-
-	user, err := NewUserService().FindUserByUID(userInfo.Id)
-	if err != nil && err != mongo.ErrNoDocuments {
-		log.Println(err.Error())
-		return nil, err
-	}
-	if user == nil {
-		// Create user with Google info
-		user, err = NewUserService().CreateUserWithGoogleFromOAuth(userInfo)
+	if loginDto.Type == "apple" {
+		// Handle Apple login
+		userInfo, err := a.verifyAppleIdToken(loginDto.Token)
 		if err != nil {
+			log.Println("Failed to verify Apple ID token:", err)
+			return nil, err
+		}
+
+		user, err = NewUserService().FindUserByAppleID(userInfo.Sub)
+		if err != nil && err != mongo.ErrNoDocuments {
 			log.Println(err.Error())
 			return nil, err
+		}
+
+		if user == nil {
+			// Create user with Apple info
+			user, err = NewUserService().CreateUserWithAppleFromOAuth(userInfo)
+			if err != nil {
+				log.Println(err.Error())
+				return nil, err
+			}
+		}
+	} else {
+		userInfo, err := a.verifyIdToken(loginDto.Token)
+		if err != nil {
+			log.Println("Failed to verify ID token:", err)
+			return nil, err
+		}
+
+		user, err = NewUserService().FindUserByUID(userInfo.Id)
+		if err != nil && err != mongo.ErrNoDocuments {
+			log.Println(err.Error())
+			return nil, err
+		}
+
+		if user == nil {
+			// Create user with Google info
+			user, err = NewUserService().CreateUserWithGoogleFromOAuth(userInfo)
+			if err != nil {
+				log.Println(err.Error())
+				return nil, err
+			}
 		}
 	}
 
@@ -108,6 +137,130 @@ func (a *AuthService) verifyIdToken(idToken string) (*oauth2.Userinfo, error) {
 	return userInfo, nil
 }
 
+func (a *AuthService) verifyAppleIdToken(idToken string) (*model.AppleUserInfo, error) {
+	// Parse the JWT header to get the kid (key ID)
+	parts := strings.Split(idToken, ".")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid JWT format")
+	}
+
+	// Decode the header
+	headerData, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode JWT header: %v", err)
+	}
+
+	var header struct {
+		Kid string `json:"kid"`
+		Alg string `json:"alg"`
+	}
+	if err := json.Unmarshal(headerData, &header); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JWT header: %v", err)
+	}
+
+	// Get Apple's public keys
+	jwks, err := a.getAppleJWKS()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Apple JWKS: %v", err)
+	}
+
+	// Find the matching key
+	var matchingKey *model.AppleJWK
+	for _, key := range jwks.Keys {
+		if key.Kid == header.Kid {
+			matchingKey = &key
+			break
+		}
+	}
+
+	if matchingKey == nil {
+		return nil, fmt.Errorf("no matching key found for kid: %s", header.Kid)
+	}
+
+	// Create RSA public key from JWK
+	publicKey, err := a.createRSAPublicKey(matchingKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create RSA public key: %v", err)
+	}
+
+	// Parse and verify the token
+	token, err := jwt.ParseWithClaims(idToken, &model.AppleClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// Verify the signing method
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return publicKey, nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify Apple ID token: %v", err)
+	}
+
+	claims, ok := token.Claims.(*model.AppleClaims)
+	if !ok || !token.Valid {
+		return nil, fmt.Errorf("invalid Apple ID token claims")
+	}
+
+	// Verify issuer
+	if claims.Iss != "https://appleid.apple.com" {
+		return nil, fmt.Errorf("invalid issuer: %s", claims.Iss)
+	}
+
+	// Create AppleUserInfo from claims
+	var name string
+	if claims.Name.FirstName != "" || claims.Name.LastName != "" {
+		name = strings.TrimSpace(claims.Name.FirstName + " " + claims.Name.LastName)
+	}
+
+	userInfo := &model.AppleUserInfo{
+		Sub:           claims.Sub,
+		Email:         claims.Email,
+		VerifiedEmail: claims.EmailVerified,
+		Name:          name,
+		GivenName:     claims.Name.FirstName,
+		FamilyName:    claims.Name.LastName,
+	}
+
+	return userInfo, nil
+}
+
+func (a *AuthService) getAppleJWKS() (*model.AppleJWKS, error) {
+	resp, err := http.Get("https://appleid.apple.com/auth/keys")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var jwks model.AppleJWKS
+	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
+		return nil, err
+	}
+
+	return &jwks, nil
+}
+
+func (a *AuthService) createRSAPublicKey(jwk *model.AppleJWK) (interface{}, error) {
+	// Decode base64url-encoded n and e
+	nBytes, err := base64.RawURLEncoding.DecodeString(jwk.N)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode n: %v", err)
+	}
+
+	eBytes, err := base64.RawURLEncoding.DecodeString(jwk.E)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode e: %v", err)
+	}
+
+	// Convert to big.Int
+	n := new(big.Int).SetBytes(nBytes)
+	e := int(new(big.Int).SetBytes(eBytes).Int64())
+
+	return &rsa.PublicKey{
+		N: n,
+		E: e,
+	}, nil
+}
+
 func (a *AuthService) GenerateRefreshToken(user model.User) (string, error) {
 	expireHourRefreshStr := config.GetInstanceConfig().JWTRefreshExpired
 	secretKey := config.GetInstanceConfig().JWTSecret
@@ -118,6 +271,7 @@ func (a *AuthService) GenerateRefreshToken(user model.User) (string, error) {
 	claims := model.JwtCustomClaims{
 		Email:    user.Email,
 		GoogleID: *new(string),
+		AppleID:  *new(string),
 		GithubID: *new(string),
 		RoleName: *new(string),
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -170,9 +324,14 @@ func (a *AuthService) GenerateToken(refreshToken string) (string, error) {
 			user.GoogleID = new(string)
 		}
 
+		if user.AppleID == nil {
+			user.AppleID = new(string)
+		}
+
 		newClaim := model.JwtCustomClaims{
 			Email:    claims.Email,
 			GoogleID: *user.GoogleID,
+			AppleID:  *user.AppleID,
 			GithubID: *user.GithubID,
 			RoleName: user.RoleName,
 			Name:     *user.Name,
