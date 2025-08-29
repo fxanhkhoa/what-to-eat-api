@@ -2,6 +2,7 @@ package socketio_service
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"what-to-eat/be/model"
 	"what-to-eat/be/service"
@@ -12,6 +13,7 @@ func ProcessDishVoteUpdate(data ...any) (*model.DishVote, model.SocketioJoinRoom
 	if err != nil {
 		log.Printf("Error marshaling data[0] to JSON: %v", err)
 	}
+
 	var input model.SocketioDishVoteUpdate
 	if err := json.Unmarshal(jsonStr, &input); err != nil {
 		log.Printf("Error unmarshaling JSON to SocketioDishVoteUpdate: %v", err)
@@ -32,6 +34,8 @@ func ProcessDishVoteUpdate(data ...any) (*model.DishVote, model.SocketioJoinRoom
 	if err != nil {
 		log.Printf("Error finding DishVote with RoomID %s: %v", socketioJoinRoomData.RoomID, err)
 	}
+
+	fmt.Println(dishVote)
 
 	updateDishVote := model.UpdateDishVoteDto{
 		ID:            dishVote.ID,

@@ -55,3 +55,13 @@ func (cr *AuthController) Logout(c echo.Context) error {
 	}
 	return c.NoContent(http.StatusOK)
 }
+
+func (cr *AuthController) GetProfile(c echo.Context) error {
+	claim := c.Get("CLAIM").(*model.JwtCustomClaims)
+	var service = &service.UserService{}
+	result, err := service.FindByID(claim.ID)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, result)
+}
