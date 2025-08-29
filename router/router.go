@@ -23,4 +23,7 @@ func InitializeRoutes(e *echo.Echo) {
 
 	contactGroup := e.Group("/contact")
 	UseContactRouter(contactGroup)
+
+	chatGroup := e.Group("/chat")
+	UseChatRouter(chatGroup)
 }

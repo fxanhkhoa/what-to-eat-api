@@ -14,4 +14,5 @@ func UseAuthGroup(group *echo.Group) {
 	group.POST("/login/", controller.Login)
 	group.POST("/refresh-token/", controller.RefreshToken)
 	group.POST("/logout/", controller.Logout, aG.AuthGuard)
+	group.GET("/profile/", controller.GetProfile, aG.AuthGuard)
 }
