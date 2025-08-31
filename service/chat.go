@@ -52,11 +52,12 @@ func (cs *ChatService) CreateMessage(createMessageInput model.CreateChatMessageD
 		message.Reactions = make(map[string]int)
 	}
 
-	_, err := collection.InsertOne(context.TODO(), message)
+	result, err := collection.InsertOne(context.TODO(), message)
 	if err != nil {
 		return nil, err
 	}
 
+	message.ID = result.InsertedID.(primitive.ObjectID)
 	return &message, nil
 }
 
