@@ -18,7 +18,7 @@ func (cr *AuthController) Login(c echo.Context) error {
 	}
 
 	var service = &service.AuthService{}
-	result, err := service.Login(dto)
+	result, err := service.Login(dto, c)
 	if err != nil {
 		return c.String(http.StatusUnauthorized, err.Error())
 	}

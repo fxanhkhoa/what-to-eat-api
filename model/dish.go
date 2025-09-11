@@ -29,6 +29,11 @@ type QueryDishRandomDto struct {
 	MealCategories *[]string `json:"mealCategories"`
 }
 
+type QueryDishSuggestionDto struct {
+	Keyword string `json:"keyword"`
+	Limit   int    `json:"limit"`
+}
+
 type Dish struct {
 	Slug                 string               `json:"slug" bson:"slug"`
 	Title                []*MultiLanguage     `json:"title" bson:"title"`

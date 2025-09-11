@@ -16,6 +16,17 @@ func NewDishController() *DishController {
 	return &DishController{}
 }
 
+func (dc *DishController) Analyze(c echo.Context) error {
+	dishService := &service.DishService{}
+	result, err := dishService.Analyze()
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return err
+	}
+
+	return c.JSON(http.StatusOK, result)
+}
+
 func (dc *DishController) Find(c echo.Context) error {
 	var query model.QueryDishDto
 
@@ -195,4 +206,123 @@ func (dc *DishController) Remove(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
 	return c.JSON(http.StatusOK, record)
+}
+
+// FindWithScore provides enhanced search with relevance scoring
+func (dc *DishController) FindWithScore(c echo.Context) error {
+	var query model.QueryDishDto
+
+	var err error
+	query.BaseDto.Page, err = strconv.Atoi(c.QueryParam("page"))
+	if err != nil || query.BaseDto.Page < 0 {
+		query.BaseDto.Page = 1
+	}
+
+	query.BaseDto.Limit, err = strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || query.BaseDto.Limit < 0 {
+		query.BaseDto.Limit = 10
+	}
+
+	keyword := c.QueryParam("keyword")
+	if keyword != "" {
+		query.Keyword = &keyword
+	}
+
+	tags := c.Request().URL.Query()["tags"]
+	if len(tags) > 0 {
+		query.Tags = &tags
+	}
+
+	preparationTimeFrom := c.QueryParam("preparationTimeFrom")
+	if preparationTimeFrom != "" {
+		value, err := strconv.Atoi(preparationTimeFrom)
+		if err == nil {
+			query.PreparationTimeFrom = &value
+		}
+	}
+
+	preparationTimeTo := c.QueryParam("preparationTimeTo")
+	if preparationTimeTo != "" {
+		value, err := strconv.Atoi(preparationTimeTo)
+		if err == nil {
+			query.PreparationTimeTo = &value
+		}
+	}
+
+	cookingTimeFrom := c.QueryParam("cookingTimeFrom")
+	if cookingTimeFrom != "" {
+		value, err := strconv.Atoi(cookingTimeFrom)
+		if err == nil {
+			query.CookingTimeFrom = &value
+		}
+	}
+
+	cookingTimeTo := c.QueryParam("cookingTimeTo")
+	if cookingTimeTo != "" {
+		value, err := strconv.Atoi(cookingTimeTo)
+		if err == nil {
+			query.CookingTimeTo = &value
+		}
+	}
+
+	difficultLevels := c.Request().URL.Query()["difficultLevels"]
+	if len(difficultLevels) > 0 {
+		query.DifficultLevels = &difficultLevels
+	}
+
+	mealCategories := c.Request().URL.Query()["mealCategories"]
+	if len(mealCategories) > 0 {
+		query.MealCategories = &mealCategories
+	}
+
+	ingredientCategories := c.Request().URL.Query()["ingredientCategories"]
+	if len(ingredientCategories) > 0 {
+		query.IngredientCategories = &ingredientCategories
+	}
+
+	ingredients := c.Request().URL.Query()["ingredients"]
+	if len(ingredients) > 0 {
+		query.Ingredients = &ingredients
+	}
+
+	labels := c.Request().URL.Query()["labels"]
+	if len(labels) > 0 {
+		query.Labels = &labels
+	}
+
+	dishService := &service.DishService{}
+	dishes, count, err := dishService.FindWithScore(query)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, helper.PaginationObject{
+		Data:  dishes,
+		Count: count,
+	})
+}
+
+// FindSuggestions provides auto-complete suggestions
+func (dc *DishController) FindSuggestions(c echo.Context) error {
+	keyword := c.QueryParam("keyword")
+	limitStr := c.QueryParam("limit")
+
+	limit := 10 // default limit
+	if limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	dishService := &service.DishService{}
+	suggestions, err := dishService.FindSuggestions(keyword, limit)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+
+	data := map[string]interface{}{
+		"suggestions": suggestions,
+	}
+
+	return c.JSON(http.StatusOK, data)
 }

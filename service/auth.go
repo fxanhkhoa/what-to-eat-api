@@ -15,6 +15,7 @@ import (
 	"what-to-eat/be/model"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/api/oauth2/v2"
@@ -24,7 +25,7 @@ import (
 type AuthService struct{}
 
 // Login verifies Google ID token and authenticates the user
-func (a *AuthService) Login(loginDto model.LoginDto) (*model.TokenResult, error) {
+func (a *AuthService) Login(loginDto model.LoginDto, c echo.Context) (*model.TokenResult, error) {
 	var data model.TokenResult
 	var user *model.User
 	var err error
@@ -72,6 +73,14 @@ func (a *AuthService) Login(loginDto model.LoginDto) (*model.TokenResult, error)
 				return nil, err
 			}
 		}
+	}
+
+	// Track user login
+	if user != nil {
+		userId := user.ID
+		ip := c.RealIP()
+		userAgent := c.Request().UserAgent()
+		_ = (&UserLoginTrackService{}).TrackLogin(userId, ip, userAgent)
 	}
 
 	refreshToken, err := a.GenerateRefreshToken(*user)

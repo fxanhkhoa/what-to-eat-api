@@ -26,4 +26,11 @@ func InitializeRoutes(e *echo.Echo) {
 
 	chatGroup := e.Group("/chat")
 	UseChatRouter(chatGroup)
+
+	userLoginTrackGroup := e.Group("/user-login-track")
+	UseUserLoginTrackGroup(userLoginTrackGroup)
+
+	websiteVisitGroup := e.Group("/website-visit")
+	UseWebsiteVisitGroup(websiteVisitGroup)
+
 }
