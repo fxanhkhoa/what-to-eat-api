@@ -109,7 +109,209 @@ func (dc *DishController) Find(c echo.Context) error {
 	query.Labels = &labels
 
 	dishService := &service.DishService{}
-	dishes, count, err := dishService.Find(query)
+
+	// Use smart search if keyword is provided, otherwise use regular find
+	var dishes []*model.Dish
+	var count int64
+
+	if query.Keyword != nil && *query.Keyword != "" {
+		// Use the enhanced smart search
+		dishes, count, err = dishService.FindSmart(query)
+	} else {
+		// Use regular find for filter-only queries
+		dishes, count, err = dishService.Find(query)
+	}
+
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return err
+	}
+
+	return c.JSON(http.StatusOK, helper.PaginationObject{
+		Data:  dishes,
+		Count: count,
+	})
+}
+
+// FindWithScore provides enhanced search with relevance scoring
+func (dc *DishController) FindWithScore(c echo.Context) error {
+	var query model.QueryDishDto
+
+	var err error
+	query.BaseDto.Page, err = strconv.Atoi(c.QueryParam("page"))
+	if err != nil || query.BaseDto.Page < 0 {
+		query.BaseDto.Page = 1
+	}
+
+	query.BaseDto.Limit, err = strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || query.BaseDto.Limit < 0 {
+		query.BaseDto.Limit = 10
+	}
+
+	keyword := c.QueryParam("keyword")
+	if keyword != "" {
+		query.Keyword = &keyword
+	}
+
+	tags := c.Request().URL.Query()["tags"]
+	if len(tags) > 0 {
+		query.Tags = &tags
+	}
+
+	preparationTimeFromStr := c.QueryParam("preparationTimeFrom")
+	if preparationTimeFromStr != "" {
+		num, err := strconv.Atoi(preparationTimeFromStr)
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return err
+		}
+		query.PreparationTimeFrom = &num
+	}
+
+	preparationTimeToStr := c.QueryParam("preparationTimeTo")
+	if preparationTimeToStr != "" {
+		num, err := strconv.Atoi(preparationTimeToStr)
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return err
+		}
+		query.PreparationTimeTo = &num
+	}
+
+	cookingTimeFromStr := c.QueryParam("cookingTimeFrom")
+	if cookingTimeFromStr != "" {
+		num, err := strconv.Atoi(cookingTimeFromStr)
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return err
+		}
+		query.CookingTimeFrom = &num
+	}
+
+	cookingTimeToStr := c.QueryParam("cookingTimeTo")
+	if cookingTimeToStr != "" {
+		num, err := strconv.Atoi(cookingTimeToStr)
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return err
+		}
+		query.CookingTimeTo = &num
+	}
+
+	q := c.Request().URL.Query()
+
+	difficultLevels := q["difficultLevels"]
+	query.DifficultLevels = &difficultLevels
+
+	mealCategories := q["mealCategories"]
+	query.MealCategories = &mealCategories
+
+	ingredientCategories := q["ingredientCategories"]
+	query.IngredientCategories = &ingredientCategories
+
+	ingredients := q["ingredients"]
+	query.Ingredients = &ingredients
+
+	labels := q["labels"]
+	query.Labels = &labels
+
+	dishService := &service.DishService{}
+	dishes, count, err := dishService.FindWithScore(query)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return err
+	}
+
+	return c.JSON(http.StatusOK, helper.PaginationObject{
+		Data:  dishes,
+		Count: count,
+	})
+}
+
+// FindWithFuzzy provides fuzzy search with typo tolerance
+func (dc *DishController) FindWithFuzzy(c echo.Context) error {
+	var query model.QueryDishDto
+
+	var err error
+	query.BaseDto.Page, err = strconv.Atoi(c.QueryParam("page"))
+	if err != nil || query.BaseDto.Page < 0 {
+		query.BaseDto.Page = 1
+	}
+
+	query.BaseDto.Limit, err = strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || query.BaseDto.Limit < 0 {
+		query.BaseDto.Limit = 10
+	}
+
+	keyword := c.QueryParam("keyword")
+	if keyword != "" {
+		query.Keyword = &keyword
+	}
+
+	tags := c.Request().URL.Query()["tags"]
+	if len(tags) > 0 {
+		query.Tags = &tags
+	}
+
+	preparationTimeFromStr := c.QueryParam("preparationTimeFrom")
+	if preparationTimeFromStr != "" {
+		num, err := strconv.Atoi(preparationTimeFromStr)
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return err
+		}
+		query.PreparationTimeFrom = &num
+	}
+
+	preparationTimeToStr := c.QueryParam("preparationTimeTo")
+	if preparationTimeToStr != "" {
+		num, err := strconv.Atoi(preparationTimeToStr)
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return err
+		}
+		query.PreparationTimeTo = &num
+	}
+
+	cookingTimeFromStr := c.QueryParam("cookingTimeFrom")
+	if cookingTimeFromStr != "" {
+		num, err := strconv.Atoi(cookingTimeFromStr)
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return err
+		}
+		query.CookingTimeFrom = &num
+	}
+
+	cookingTimeToStr := c.QueryParam("cookingTimeTo")
+	if cookingTimeToStr != "" {
+		num, err := strconv.Atoi(cookingTimeToStr)
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return err
+		}
+		query.CookingTimeTo = &num
+	}
+
+	q := c.Request().URL.Query()
+
+	difficultLevels := q["difficultLevels"]
+	query.DifficultLevels = &difficultLevels
+
+	mealCategories := q["mealCategories"]
+	query.MealCategories = &mealCategories
+
+	ingredientCategories := q["ingredientCategories"]
+	query.IngredientCategories = &ingredientCategories
+
+	ingredients := q["ingredients"]
+	query.Ingredients = &ingredients
+
+	labels := q["labels"]
+	query.Labels = &labels
+
+	dishService := &service.DishService{}
+	dishes, count, err := dishService.FindWithFuzzyScore(query)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return err
@@ -206,100 +408,6 @@ func (dc *DishController) Remove(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
 	return c.JSON(http.StatusOK, record)
-}
-
-// FindWithScore provides enhanced search with relevance scoring
-func (dc *DishController) FindWithScore(c echo.Context) error {
-	var query model.QueryDishDto
-
-	var err error
-	query.BaseDto.Page, err = strconv.Atoi(c.QueryParam("page"))
-	if err != nil || query.BaseDto.Page < 0 {
-		query.BaseDto.Page = 1
-	}
-
-	query.BaseDto.Limit, err = strconv.Atoi(c.QueryParam("limit"))
-	if err != nil || query.BaseDto.Limit < 0 {
-		query.BaseDto.Limit = 10
-	}
-
-	keyword := c.QueryParam("keyword")
-	if keyword != "" {
-		query.Keyword = &keyword
-	}
-
-	tags := c.Request().URL.Query()["tags"]
-	if len(tags) > 0 {
-		query.Tags = &tags
-	}
-
-	preparationTimeFrom := c.QueryParam("preparationTimeFrom")
-	if preparationTimeFrom != "" {
-		value, err := strconv.Atoi(preparationTimeFrom)
-		if err == nil {
-			query.PreparationTimeFrom = &value
-		}
-	}
-
-	preparationTimeTo := c.QueryParam("preparationTimeTo")
-	if preparationTimeTo != "" {
-		value, err := strconv.Atoi(preparationTimeTo)
-		if err == nil {
-			query.PreparationTimeTo = &value
-		}
-	}
-
-	cookingTimeFrom := c.QueryParam("cookingTimeFrom")
-	if cookingTimeFrom != "" {
-		value, err := strconv.Atoi(cookingTimeFrom)
-		if err == nil {
-			query.CookingTimeFrom = &value
-		}
-	}
-
-	cookingTimeTo := c.QueryParam("cookingTimeTo")
-	if cookingTimeTo != "" {
-		value, err := strconv.Atoi(cookingTimeTo)
-		if err == nil {
-			query.CookingTimeTo = &value
-		}
-	}
-
-	difficultLevels := c.Request().URL.Query()["difficultLevels"]
-	if len(difficultLevels) > 0 {
-		query.DifficultLevels = &difficultLevels
-	}
-
-	mealCategories := c.Request().URL.Query()["mealCategories"]
-	if len(mealCategories) > 0 {
-		query.MealCategories = &mealCategories
-	}
-
-	ingredientCategories := c.Request().URL.Query()["ingredientCategories"]
-	if len(ingredientCategories) > 0 {
-		query.IngredientCategories = &ingredientCategories
-	}
-
-	ingredients := c.Request().URL.Query()["ingredients"]
-	if len(ingredients) > 0 {
-		query.Ingredients = &ingredients
-	}
-
-	labels := c.Request().URL.Query()["labels"]
-	if len(labels) > 0 {
-		query.Labels = &labels
-	}
-
-	dishService := &service.DishService{}
-	dishes, count, err := dishService.FindWithScore(query)
-	if err != nil {
-		return c.String(http.StatusInternalServerError, err.Error())
-	}
-
-	return c.JSON(http.StatusOK, helper.PaginationObject{
-		Data:  dishes,
-		Count: count,
-	})
 }
 
 // FindSuggestions provides auto-complete suggestions

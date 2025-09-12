@@ -13,7 +13,8 @@ func UseDishRouter(group *echo.Group) {
 	rG := middleware.NewRoleGuard()
 	controller := &controllers.DishController{}
 	group.GET("/", controller.Find)
-	group.GET("/search/", controller.FindWithScore)      // Enhanced search with scoring
+	group.GET("/search/", controller.FindWithScore)        // Enhanced search with scoring
+	group.GET("/search/fuzzy/", controller.FindWithFuzzy)  // Fuzzy search with typo tolerance
 	group.GET("/suggestions/", controller.FindSuggestions) // Auto-complete suggestions
 	group.GET("/analyze/", controller.Analyze, aG.AuthGuard, rG.RoleGuard([]string{constants.ANALYZE_DISH}))
 	group.GET("/random/", controller.FindRandom)
