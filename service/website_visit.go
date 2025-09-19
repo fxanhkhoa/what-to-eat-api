@@ -5,9 +5,11 @@ import (
 	"time"
 	"what-to-eat/be/config"
 	"what-to-eat/be/constants"
+	"what-to-eat/be/model"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type WebsiteVisit struct {
@@ -37,4 +39,28 @@ func (s *WebsiteVisitService) TrackVisit(ip, userAgent string) error {
 func (s *WebsiteVisitService) CountVisits() (int64, error) {
 	collection := s.Collection()
 	return collection.CountDocuments(context.TODO(), bson.M{})
+}
+
+func (s *WebsiteVisitService) Find(query model.BaseDto) ([]*WebsiteVisit, int64, error) {
+	collection := s.Collection()
+	opts := options.Find().SetSort(bson.D{{Key: "visitedAt", Value: -1}}).SetSkip((int64(query.Page) - 1) * int64(query.Limit)).SetLimit(int64(query.Limit))
+	filter := bson.D{}
+
+	count, err := collection.CountDocuments(context.TODO(), filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	cursor, err := collection.Find(context.TODO(), filter, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(context.TODO())
+
+	var visits []*WebsiteVisit
+	if err = cursor.All(context.TODO(), &visits); err != nil {
+		return nil, 0, err
+	}
+
+	return visits, count, nil
 }

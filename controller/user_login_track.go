@@ -12,6 +12,13 @@ import (
 type UserLoginTrackController struct{}
 
 func (ctrl *UserLoginTrackController) GetAllUserLogins(c echo.Context) error {
+	pageStr := c.QueryParam("page")
+	page := int64(1)
+	if pageStr != "" {
+		if p, err := strconv.ParseInt(pageStr, 10, 64); err == nil && p > 0 {
+			page = p
+		}
+	}
 	limitStr := c.QueryParam("limit")
 	limit := int64(50)
 	if limitStr != "" {
@@ -19,7 +26,7 @@ func (ctrl *UserLoginTrackController) GetAllUserLogins(c echo.Context) error {
 			limit = l
 		}
 	}
-	tracks, count, err := (&service.UserLoginTrackService{}).GetAllUserLogins(limit)
+	tracks, count, err := (&service.UserLoginTrackService{}).GetAllUserLogins(page, limit)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}

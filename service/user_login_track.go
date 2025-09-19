@@ -31,10 +31,12 @@ func (s *UserLoginTrackService) TrackLogin(userId, ip, userAgent string) error {
 	return err
 }
 
-func (s *UserLoginTrackService) GetAllUserLogins(limit int64) ([]model.UserLoginTrack, int64, error) {
+func (s *UserLoginTrackService) GetAllUserLogins(page, limit int64) ([]model.UserLoginTrack, int64, error) {
 	collection := s.Collection()
+	skip := (page - 1) * limit
 	opts := options.Find()
 	opts.SetLimit(limit)
+	opts.SetSkip(skip)
 	opts.SetSort(bson.D{{Key: "loginAt", Value: -1}})
 
 	count, err := collection.CountDocuments(context.TODO(), bson.M{})
