@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"math"
 	"net/http"
 	"strconv"
+	"what-to-eat/be/helper"
 	"what-to-eat/be/model"
 	"what-to-eat/be/service"
 
@@ -47,17 +47,10 @@ func (cr *UserController) FindAll(c echo.Context) error {
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
-	result := model.PaginationResponse{
-		Data: &records,
-		Metadata: model.CountMetaData{
-			TotalItems:   count,
-			ItemCount:    len(records),
-			ItemsPerPage: query.BaseDto.Limit,
-			TotalPages:   math.Ceil(float64(count) / float64(query.BaseDto.Limit)),
-			CurrentPage:  query.BaseDto.Page,
-		},
-	}
-	return c.JSON(http.StatusOK, result)
+	return c.JSON(http.StatusOK, helper.PaginationObject{
+		Data:  records,
+		Count: count,
+	})
 }
 
 func (cr *UserController) FindOne(c echo.Context) error {

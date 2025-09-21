@@ -26,7 +26,7 @@ func (s *RolePermissionService) Collection() *mongo.Collection {
 	return col
 }
 
-func (r *RolePermissionService) Create(input model.CreateRolePermissionDto, profile *model.User) (*model.RolePermission, error) {
+func (r *RolePermissionService) Create(input model.CreateRolePermissionDto, profile *model.JwtCustomClaims) (*model.RolePermission, error) {
 	collection := r.Collection()
 	now := time.Now()
 
@@ -51,7 +51,7 @@ func (r *RolePermissionService) Create(input model.CreateRolePermissionDto, prof
 	return &rolePermission, decodeErr
 }
 
-func (r *RolePermissionService) Update(input model.UpdateRolePermissionDto, profile *model.User) (*model.RolePermission, error) {
+func (r *RolePermissionService) Update(input model.UpdateRolePermissionDto, profile *model.JwtCustomClaims) (*model.RolePermission, error) {
 	collection := r.Collection()
 	now := time.Now()
 
@@ -93,10 +93,17 @@ func (r *RolePermissionService) FindOne(id string) (*model.RolePermission, error
 	return &rolePermission, decodeErr
 }
 
-func (r *RolePermissionService) Find(page *int, limit *int) ([]*model.RolePermission, error) {
+func (r *RolePermissionService) Find(page *int, limit *int) ([]*model.RolePermission, int64, error) {
 	collection := r.Collection()
 	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(*page) - 1) * int64(*limit)).SetLimit(int64(*limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
+
+	count, err := collection.CountDocuments(context.TODO(), filter)
+	if err != nil {
+		log.Println(err)
+		return nil, 0, err
+	}
+
 	cursor, err := collection.Find(context.TODO(), filter, opts)
 	if err != nil {
 		log.Println(err)
@@ -106,10 +113,10 @@ func (r *RolePermissionService) Find(page *int, limit *int) ([]*model.RolePermis
 		log.Println(err)
 	}
 	defer cursor.Close(context.TODO())
-	return rolePermissions, err
+	return rolePermissions, count, err
 }
 
-func (r *RolePermissionService) Remove(id string, profile *model.User) (*model.RolePermission, error) {
+func (r *RolePermissionService) Remove(id string, profile *model.JwtCustomClaims) (*model.RolePermission, error) {
 	collection := r.Collection()
 	now := time.Now()
 	var rolePermission model.RolePermission
