@@ -5,6 +5,7 @@ import "github.com/golang-jwt/jwt/v5"
 type LoginDto struct {
 	Token string `json:"token" bson:"token"`
 	Type  string `json:"type" bson:"type" default:"google"` // 'google' or 'apple', default is 'google'
+	IP    string `json:"ip,omitempty" bson:"ip,omitempty"`  // Optional: client-provided IP address
 }
 
 type RefreshTokenDto struct {

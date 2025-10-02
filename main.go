@@ -9,11 +9,25 @@ import (
 	"what-to-eat/be/router"
 	"what-to-eat/be/socketio"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
+
+// CustomValidator is a custom validator for Echo
+type CustomValidator struct {
+	validator *validator.Validate
+}
+
+// Validate validates the struct
+func (cv *CustomValidator) Validate(i interface{}) error {
+	if err := cv.validator.Struct(i); err != nil {
+		return err
+	}
+	return nil
+}
 
 func main() {
 	err := godotenv.Load()
@@ -26,6 +40,7 @@ func main() {
 	}
 
 	e := echo.New()
+	e.Validator = &CustomValidator{validator: validator.New()}
 	config.GetDBInstance()
 	firebase.InitFirebase()
 

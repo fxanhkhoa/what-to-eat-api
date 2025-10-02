@@ -12,8 +12,21 @@ import (
 
 type WebsiteVisitController struct{}
 
+// TrackVisitDto is used to optionally accept IP from frontend
+type TrackVisitDto struct {
+	IP string `json:"ip,omitempty"`
+}
+
 func (ctrl *WebsiteVisitController) TrackVisit(c echo.Context) error {
-	ip := c.RealIP()
+	// Try to get IP from request body first
+	var dto TrackVisitDto
+	ip := c.RealIP() // Default to server-detected IP
+
+	// If client sends IP in request body, use that instead
+	if err := c.Bind(&dto); err == nil && dto.IP != "" {
+		ip = dto.IP
+	}
+
 	userAgent := c.Request().UserAgent()
 	err := (&service.WebsiteVisitService{}).TrackVisit(ip, userAgent)
 	if err != nil {

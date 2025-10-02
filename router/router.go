@@ -33,4 +33,7 @@ func InitializeRoutes(e *echo.Echo) {
 	websiteVisitGroup := e.Group("/website-visit")
 	UseWebsiteVisitGroup(websiteVisitGroup)
 
+	feedbackGroup := e.Group("/feedback")
+	UseFeedbackRouter(feedbackGroup)
+
 }

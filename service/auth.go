@@ -78,7 +78,13 @@ func (a *AuthService) Login(loginDto model.LoginDto, c echo.Context) (*model.Tok
 	// Track user login
 	if user != nil {
 		userId := user.ID
-		ip := c.RealIP()
+		ip := c.RealIP() // Default to server-detected IP
+
+		// If client sends IP in request body, use that instead
+		if loginDto.IP != "" {
+			ip = loginDto.IP
+		}
+
 		userAgent := c.Request().UserAgent()
 		_ = (&UserLoginTrackService{}).TrackLogin(userId, ip, userAgent)
 	}
