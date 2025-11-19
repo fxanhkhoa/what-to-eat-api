@@ -1,0 +1,1540 @@
+{
+	"info": {
+		"_postman_id": "what-to-eat-api-collection",
+		"name": "What To Eat API",
+		"description": "Complete API collection for What To Eat application",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:1323",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login (Google)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set(\"access_token\", jsonData.data.accessToken);",
+									"    pm.collectionVariables.set(\"refresh_token\", jsonData.data.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"YOUR_GOOGLE_ID_TOKEN\",\n  \"type\": \"google\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login/",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login", ""]
+						},
+						"description": "Login with Google OAuth token"
+					},
+					"response": []
+				},
+				{
+					"name": "Login (Apple)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set(\"access_token\", jsonData.data.accessToken);",
+									"    pm.collectionVariables.set(\"refresh_token\", jsonData.data.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"YOUR_APPLE_ID_TOKEN\",\n  \"type\": \"apple\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login/",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login", ""]
+						},
+						"description": "Login with Apple ID token"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set(\"access_token\", jsonData.data.accessToken);",
+									"    pm.collectionVariables.set(\"refresh_token\", jsonData.data.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/refresh-token/",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "refresh-token", ""]
+						},
+						"description": "Refresh access token using refresh token"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/logout/",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "logout", ""]
+						},
+						"description": "Logout and invalidate refresh token"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/profile/",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "profile", ""]
+						},
+						"description": "Get current user profile"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"name\": \"John Doe\",\n  \"phone\": \"+1234567890\",\n  \"address\": \"123 Main St\",\n  \"avatar\": \"https://example.com/avatar.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user/",
+							"host": ["{{base_url}}"],
+							"path": ["user", ""]
+						},
+						"description": "Create a new user (requires CREATE_USER permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["user", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "keyword",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all users with pagination (requires FIND_ALL_USER permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["user", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "USER_ID"
+								}
+							]
+						},
+						"description": "Get a specific user by ID (requires FIND_ONE_USER permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Updated\",\n  \"phone\": \"+1234567890\",\n  \"address\": \"456 New St\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["user", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "USER_ID"
+								}
+							]
+						},
+						"description": "Update user information (requires UPDATE_USER permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["user", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "USER_ID"
+								}
+							]
+						},
+						"description": "Delete a user (requires REMOVE_USER permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Dishes",
+			"item": [
+				{
+					"name": "Get All Dishes",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["dish", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "keyword",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "tags",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "mealCategories",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all dishes with filtering and pagination (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Search Dishes with Score",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish/search/?keyword=chicken&page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["dish", "search", ""],
+							"query": [
+								{
+									"key": "keyword",
+									"value": "chicken"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Enhanced search with relevance scoring (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Fuzzy Search Dishes",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish/search/fuzzy/?keyword=chiken&page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["dish", "search", "fuzzy", ""],
+							"query": [
+								{
+									"key": "keyword",
+									"value": "chiken"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Fuzzy search with typo tolerance (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Dish Suggestions",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish/suggestions/?keyword=chi&limit=5",
+							"host": ["{{base_url}}"],
+							"path": ["dish", "suggestions", ""],
+							"query": [
+								{
+									"key": "keyword",
+									"value": "chi"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Get autocomplete suggestions (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Analyze Dishes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish/analyze/",
+							"host": ["{{base_url}}"],
+							"path": ["dish", "analyze", ""]
+						},
+						"description": "Get dish analytics (requires ANALYZE_DISH permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Random Dishes",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish/random/?limit=5",
+							"host": ["{{base_url}}"],
+							"path": ["dish", "random", ""],
+							"query": [
+								{
+									"key": "limit",
+									"value": "5"
+								},
+								{
+									"key": "mealCategories",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get random dishes (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Dish By ID",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["dish", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "DISH_ID"
+								}
+							]
+						},
+						"description": "Get dish by ID (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Dish By Slug",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish/slug/:slug/",
+							"host": ["{{base_url}}"],
+							"path": ["dish", "slug", ":slug", ""],
+							"variable": [
+								{
+									"key": "slug",
+									"value": "dish-slug"
+								}
+							]
+						},
+						"description": "Get dish by slug (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Dish",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"slug\": \"chicken-curry\",\n  \"title\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Chicken Curry\"\n    },\n    {\n      \"lang\": \"vi\",\n      \"value\": \"Cà ri gà\"\n    }\n  ],\n  \"shortDescription\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Delicious chicken curry\"\n    }\n  ],\n  \"content\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Full recipe content here\"\n    }\n  ],\n  \"tags\": [\"curry\", \"chicken\", \"spicy\"],\n  \"preparationTime\": 15,\n  \"cookingTime\": 30,\n  \"difficultLevel\": \"medium\",\n  \"mealCategories\": [\"dinner\", \"lunch\"],\n  \"ingredientCategories\": [\"meat\", \"spices\"],\n  \"ingredients\": [\n    {\n      \"ingredientId\": \"INGREDIENT_ID\",\n      \"slug\": \"chicken\",\n      \"quantity\": 500\n    }\n  ],\n  \"labels\": [\"popular\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/dish/",
+							"host": ["{{base_url}}"],
+							"path": ["dish", ""]
+						},
+						"description": "Create a new dish (requires CREATE_DISH permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Dish",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Updated Chicken Curry\"\n    }\n  ],\n  \"preparationTime\": 20\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/dish/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["dish", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "DISH_ID"
+								}
+							]
+						},
+						"description": "Update a dish (requires UPDATE_DISH permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Dish",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["dish", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "DISH_ID"
+								}
+							]
+						},
+						"description": "Delete a dish (requires REMOVE_DISH permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Ingredients",
+			"item": [
+				{
+					"name": "Get All Ingredients",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ingredient/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["ingredient", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "keyword",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all ingredients (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Random Ingredients",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ingredient/random/?limit=5",
+							"host": ["{{base_url}}"],
+							"path": ["ingredient", "random", ""],
+							"query": [
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Get random ingredients (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ingredient By Title and Language",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ingredient/byTitleLang/?title=chicken&lang=en",
+							"host": ["{{base_url}}"],
+							"path": ["ingredient", "byTitleLang", ""],
+							"query": [
+								{
+									"key": "title",
+									"value": "chicken"
+								},
+								{
+									"key": "lang",
+									"value": "en"
+								}
+							]
+						},
+						"description": "Get ingredient by title and language (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ingredient By ID",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ingredient/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["ingredient", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "INGREDIENT_ID"
+								}
+							]
+						},
+						"description": "Get ingredient by ID (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ingredient By Slug",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ingredient/slug/:slug/",
+							"host": ["{{base_url}}"],
+							"path": ["ingredient", "slug", ":slug", ""],
+							"variable": [
+								{
+									"key": "slug",
+									"value": "chicken"
+								}
+							]
+						},
+						"description": "Get ingredient by slug (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Ingredient",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"slug\": \"chicken-breast\",\n  \"title\": [\n    {\n      \"lang\": \"en\",\n      \"value\": \"Chicken Breast\"\n    },\n    {\n      \"lang\": \"vi\",\n      \"value\": \"Ức gà\"\n    }\n  ],\n  \"measure\": \"gram\",\n  \"calories\": 165,\n  \"carbohydrate\": 0,\n  \"fat\": 3,\n  \"protein\": 31,\n  \"ingredientCategory\": [\"meat\", \"protein\"],\n  \"weight\": 100,\n  \"images\": [\"https://example.com/chicken.jpg\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/ingredient/",
+							"host": ["{{base_url}}"],
+							"path": ["ingredient", ""]
+						},
+						"description": "Create a new ingredient (requires CREATE_INGREDIENT permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Ingredient",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"calories\": 170,\n  \"protein\": 32\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/ingredient/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["ingredient", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "INGREDIENT_ID"
+								}
+							]
+						},
+						"description": "Update an ingredient (requires UPDATE_INGREDIENT permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Ingredient",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ingredient/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["ingredient", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "INGREDIENT_ID"
+								}
+							]
+						},
+						"description": "Delete an ingredient (requires REMOVE_INGREDIENT permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Dish Votes",
+			"item": [
+				{
+					"name": "Get All Dish Votes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish-vote/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["dish-vote", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get all dish votes (requires FIND_ALL_DISH_VOTE permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Dish Vote By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish-vote/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["dish-vote", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "VOTE_ID"
+								}
+							]
+						},
+						"description": "Get dish vote by ID (requires FIND_ONE_DISH_VOTE permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Dish Vote",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"dishId\": \"DISH_ID\",\n  \"vote\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/dish-vote/",
+							"host": ["{{base_url}}"],
+							"path": ["dish-vote", ""]
+						},
+						"description": "Create a dish vote (requires CREATE_DISH_VOTE permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Authorization (Roles & Permissions)",
+			"item": [
+				{
+					"name": "Create Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roleName\": \"editor\",\n  \"permissions\": [\"CREATE_DISH\", \"UPDATE_DISH\", \"FIND_ALL_DISH\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/authorization/",
+							"host": ["{{base_url}}"],
+							"path": ["authorization", ""]
+						},
+						"description": "Create a new role (requires CREATE_ROLE permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Roles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/authorization/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["authorization", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get all roles (requires FIND_ALL_ROLE permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Role By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/authorization/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["authorization", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ROLE_ID"
+								}
+							]
+						},
+						"description": "Get role by ID (requires FIND_ONE_ROLE permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Role By Name",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/authorization/by-name/:roleName/",
+							"host": ["{{base_url}}"],
+							"path": ["authorization", "by-name", ":roleName", ""],
+							"variable": [
+								{
+									"key": "roleName",
+									"value": "admin"
+								}
+							]
+						},
+						"description": "Get role by name (requires FIND_ONE_ROLE permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Role",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"permissions\": [\"CREATE_DISH\", \"UPDATE_DISH\", \"FIND_ALL_DISH\", \"DELETE_DISH\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/authorization/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["authorization", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ROLE_ID"
+								}
+							]
+						},
+						"description": "Update a role (requires UPDATE_ROLE permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Role",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/authorization/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["authorization", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "ROLE_ID"
+								}
+							]
+						},
+						"description": "Delete a role (requires REMOVE_ROLE permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Contact",
+			"item": [
+				{
+					"name": "Get All Contacts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/contact/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["contact", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "keyword",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all contacts (requires FIND_ALL_CONTACT permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Contact By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/contact/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["contact", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "CONTACT_ID"
+								}
+							]
+						},
+						"description": "Get contact by ID (requires FIND_ONE_CONTACT permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Contact",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"contact@example.com\",\n  \"name\": \"John Doe\",\n  \"message\": \"I have a question about...\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/contact/",
+							"host": ["{{base_url}}"],
+							"path": ["contact", ""]
+						},
+						"description": "Create a contact form submission (public, rate limited: 5 requests per minute)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Contact",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"Updated message\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/contact/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["contact", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "CONTACT_ID"
+								}
+							]
+						},
+						"description": "Update contact (requires UPDATE_CONTACT permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Contact",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/contact/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["contact", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "CONTACT_ID"
+								}
+							]
+						},
+						"description": "Delete contact (requires REMOVE_CONTACT permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Chat",
+			"item": [
+				{
+					"name": "Get Message History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/chat/rooms/:roomId/messages?page=1&limit=50",
+							"host": ["{{base_url}}"],
+							"path": ["chat", "rooms", ":roomId", "messages"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "50"
+								}
+							],
+							"variable": [
+								{
+									"key": "roomId",
+									"value": "ROOM_ID"
+								}
+							]
+						},
+						"description": "Get message history for a chat room"
+					},
+					"response": []
+				},
+				{
+					"name": "Send Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"roomId\": \"ROOM_ID\",\n  \"message\": \"Hello, world!\",\n  \"messageType\": \"text\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/chat/messages",
+							"host": ["{{base_url}}"],
+							"path": ["chat", "messages"]
+						},
+						"description": "Send a message (REST API alternative to Socket.IO)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Message Reaction",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"emoji\": \"👍\",\n  \"action\": \"add\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/chat/messages/:messageId/reactions",
+							"host": ["{{base_url}}"],
+							"path": ["chat", "messages", ":messageId", "reactions"],
+							"variable": [
+								{
+									"key": "messageId",
+									"value": "MESSAGE_ID"
+								}
+							]
+						},
+						"description": "Add or remove reaction to a message"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Room Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/chat/rooms/:roomId",
+							"host": ["{{base_url}}"],
+							"path": ["chat", "rooms", ":roomId"],
+							"variable": [
+								{
+									"key": "roomId",
+									"value": "ROOM_ID"
+								}
+							]
+						},
+						"description": "Get chat room information"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Login Tracking",
+			"item": [
+				{
+					"name": "Get All User Logins",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-login-track/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["user-login-track", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get all user login tracks (requires FIND_ALL_USER_LOGIN_TRACK permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Logins By User ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-login-track/:userId/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["user-login-track", ":userId", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "USER_ID"
+								}
+							]
+						},
+						"description": "Get login history for a specific user (requires FIND_USER_LOGIN_TRACK permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Website Visits",
+			"item": [
+				{
+					"name": "Track Visit",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"page\": \"/home\",\n  \"userAgent\": \"Mozilla/5.0...\",\n  \"referrer\": \"https://google.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/website-visit/visit/",
+							"host": ["{{base_url}}"],
+							"path": ["website-visit", "visit", ""]
+						},
+						"description": "Track a website visit (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Count Visits",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/website-visit/visit/count/",
+							"host": ["{{base_url}}"],
+							"path": ["website-visit", "visit", "count", ""]
+						},
+						"description": "Get visit count (requires FIND_ALL_WEBSITE_VISIT permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Visits",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/website-visit/visit/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["website-visit", "visit", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get all website visits (requires FIND_ALL_WEBSITE_VISIT permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Feedback",
+			"item": [
+				{
+					"name": "Create Feedback",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"userName\": \"John Doe\",\n  \"rating\": 5,\n  \"comment\": \"Great website!\",\n  \"page\": \"/home\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/feedback/",
+							"host": ["{{base_url}}"],
+							"path": ["feedback", ""]
+						},
+						"description": "Create feedback (public, rate limited: 3 requests per minute)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Feedback",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/feedback/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["feedback", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "rating",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "email",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all feedback (requires authentication)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Feedback By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/feedback/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["feedback", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "FEEDBACK_ID"
+								}
+							]
+						},
+						"description": "Get feedback by ID (requires authentication)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Feedback",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rating\": 4,\n  \"comment\": \"Updated feedback\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/feedback/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["feedback", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "FEEDBACK_ID"
+								}
+							]
+						},
+						"description": "Update feedback (requires authentication)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Feedback",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/feedback/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["feedback", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "FEEDBACK_ID"
+								}
+							]
+						},
+						"description": "Delete feedback (requires authentication)"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
