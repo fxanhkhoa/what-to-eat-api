@@ -36,4 +36,25 @@ func InitializeRoutes(e *echo.Echo) {
 	feedbackGroup := e.Group("/feedback")
 	UseFeedbackRouter(feedbackGroup)
 
+	userFavoriteGroup := e.Group("/user-favorite")
+	UseUserFavoriteRouter(userFavoriteGroup)
+
+	userSavedDishGroup := e.Group("/user-saved-dish")
+	UseUserSavedDishRouter(userSavedDishGroup)
+
+	userDietaryPreferenceGroup := e.Group("/user-dietary-preference")
+	UseUserDietaryPreferenceRouter(userDietaryPreferenceGroup)
+
+	userDishInteractionGroup := e.Group("/user-dish-interaction")
+	UseUserDishInteractionRouter(userDishInteractionGroup)
+
+	dishPopularityGroup := e.Group("/dish-popularity")
+	UseDishPopularityRouter(dishPopularityGroup)
+
+	userDishCollectionGroup := e.Group("/user-dish-collection")
+	UseUserDishCollectionRouter(userDishCollectionGroup)
+
+	personalizedRandomGroup := e.Group("/personalized-random")
+	UsePersonalizedRandomRouter(personalizedRandomGroup)
+
 }
