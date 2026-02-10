@@ -67,3 +67,91 @@ const VIEW_ALL_USER_DISH_COLLECTIONS = "VIEW_ALL_USER_DISH_COLLECTIONS"
 
 const ACCESS_PERSONALIZED_RANDOM = "ACCESS_PERSONALIZED_RANDOM"
 const VIEW_USER_PREFERENCE_SUMMARY = "VIEW_USER_PREFERENCE_SUMMARY"
+
+// GetAllPermissions returns all available permissions as a slice
+func GetAllPermissions() []string {
+	return []string{
+		// Role permissions
+		CREATE_ROLE,
+		FIND_ALL_ROLE,
+		FIND_ONE_ROLE,
+		UPDATE_ROLE,
+		REMOVE_ROLE,
+
+		// User permissions
+		CREATE_USER,
+		FIND_ALL_USER,
+		FIND_ONE_USER,
+		UPDATE_USER,
+		REMOVE_USER,
+
+		// Dish permissions
+		CREATE_DISH,
+		FIND_ALL_DISH,
+		FIND_ONE_DISH,
+		UPDATE_DISH,
+		REMOVE_DISH,
+		ANALYZE_DISH,
+
+		// Ingredient permissions
+		CREATE_INGREDIENT,
+		FIND_ALL_INGREDIENT,
+		FIND_ONE_INGREDIENT,
+		UPDATE_INGREDIENT,
+		REMOVE_INGREDIENT,
+
+		// Contact permissions
+		CREATE_CONTACT,
+		FIND_ALL_CONTACT,
+		FIND_ONE_CONTACT,
+		UPDATE_CONTACT,
+		REMOVE_CONTACT,
+
+		// Dish vote permissions
+		CREATE_DISH_VOTE,
+		FIND_ALL_DISH_VOTE,
+		FIND_ONE_DISH_VOTE,
+		UPDATE_DISH_VOTE,
+		REMOVE_DISH_VOTE,
+
+		// User login track permissions
+		FIND_USER_LOGIN_TRACK,
+		FIND_ALL_USER_LOGIN_TRACK,
+
+		// Website visit permissions
+		CREATE_WEBSITE_VISIT,
+		FIND_ALL_WEBSITE_VISIT,
+		FIND_ONE_WEBSITE_VISIT,
+		UPDATE_WEBSITE_VISIT,
+		REMOVE_WEBSITE_VISIT,
+
+		// Dish popularity permissions
+		MANAGE_DISH_POPULARITY,
+		VIEW_DISH_POPULARITY,
+		UPDATE_DISH_POPULARITY,
+
+		// User favorites permissions
+		MANAGE_USER_FAVORITES,
+		VIEW_ALL_USER_FAVORITES,
+
+		// User saved dishes permissions
+		MANAGE_USER_SAVED_DISHES,
+		VIEW_ALL_USER_SAVED_DISHES,
+
+		// User dietary preferences permissions
+		MANAGE_USER_DIETARY_PREFERENCES,
+		VIEW_ALL_USER_DIETARY_PREFERENCES,
+
+		// User dish interactions permissions
+		MANAGE_USER_DISH_INTERACTIONS,
+		VIEW_ALL_USER_DISH_INTERACTIONS,
+
+		// User dish collections permissions
+		MANAGE_USER_DISH_COLLECTIONS,
+		VIEW_ALL_USER_DISH_COLLECTIONS,
+
+		// Personalized features permissions
+		ACCESS_PERSONALIZED_RANDOM,
+		VIEW_USER_PREFERENCE_SUMMARY,
+	}
+}

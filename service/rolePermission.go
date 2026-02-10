@@ -152,3 +152,7 @@ func (r *RolePermissionService) FindByName(name string) (*model.RolePermission, 
 	decodeErr := result.Decode(&rolePermission)
 	return &rolePermission, decodeErr
 }
+
+func (r *RolePermissionService) GetAllPermissions() []string {
+	return constants.GetAllPermissions()
+}

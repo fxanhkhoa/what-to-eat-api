@@ -129,3 +129,13 @@ func (r *RolePermission) FindByName(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, rolePermission)
 }
+
+func (r *RolePermission) GetAllPermissions(c echo.Context) error {
+	s := &service.RolePermissionService{}
+	permissions := s.GetAllPermissions()
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data":  permissions,
+		"count": len(permissions),
+	})
+}
