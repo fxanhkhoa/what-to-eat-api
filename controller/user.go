@@ -89,3 +89,14 @@ func (cr *UserController) Delete(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, record)
 }
+
+func (cr *UserController) DeleteUserData(c echo.Context) error {
+	id := c.Param("id")
+	var service = &service.UserService{}
+	claim := c.Get("CLAIM").(*model.JwtCustomClaims)
+	err := service.DeleteUserData(id, claim)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, map[string]string{"message": "User data permanently deleted"})
+}

@@ -11,6 +11,7 @@ const FIND_ALL_USER = "FIND_ALL_USER"
 const FIND_ONE_USER = "FIND_ONE_USER"
 const UPDATE_USER = "UPDATE_USER"
 const REMOVE_USER = "REMOVE_USER"
+const DELETE_USER_DATA = "DELETE_USER_DATA"
 
 const CREATE_DISH = "CREATE_DISH"
 const FIND_ALL_DISH = "FIND_ALL_DISH"
@@ -84,6 +85,7 @@ func GetAllPermissions() []string {
 		FIND_ONE_USER,
 		UPDATE_USER,
 		REMOVE_USER,
+		DELETE_USER_DATA,
 
 		// Dish permissions
 		CREATE_DISH,

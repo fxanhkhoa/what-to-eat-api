@@ -316,3 +316,22 @@ func (u *UserService) FindByEmail(email string) (*model.User, error) {
 	decodeErr := result.Decode(&user)
 	return &user, decodeErr
 }
+
+func (u *UserService) DeleteUserData(id string, profile *model.JwtCustomClaims) error {
+	collection := u.Collection()
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		log.Printf("Delete user data error: %s \n", err.Error())
+		return err
+	}
+	filter := bson.M{"_id": objectID}
+	result, err := collection.DeleteOne(context.TODO(), filter)
+	if err != nil {
+		log.Printf("Delete user data error: %s \n", err.Error())
+		return err
+	}
+	if result.DeletedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+	return nil
+}
