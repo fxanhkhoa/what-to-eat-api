@@ -13,7 +13,7 @@ import (
 func UseContactRouter(group *echo.Group) {
 	aG := middleware.NewAuthGuard()
 	rG := middleware.NewRoleGuard()
-	controller := &controller.ContactController{}
+	controller := controller.NewContactController()
 
 	contactPostLimiter := echoMiddleware.RateLimiterWithConfig(echoMiddleware.RateLimiterConfig{
 		Store: echoMiddleware.NewRateLimiterMemoryStoreWithConfig(

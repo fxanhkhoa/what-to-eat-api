@@ -3,6 +3,8 @@ package controller
 import (
 	"net/http"
 	"strconv"
+	"what-to-eat/be/config"
+	"what-to-eat/be/constants"
 	"what-to-eat/be/helper"
 	"what-to-eat/be/model"
 	"what-to-eat/be/service"
@@ -10,10 +12,15 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type ContactController struct{}
+type ContactController struct {
+	svc *service.ContactService
+}
 
 func NewContactController() *ContactController {
-	return &ContactController{}
+	dbName := config.GetDBInstance().GetDbName()
+	col := config.GetDBInstance().GetClient().Database(dbName).Collection(constants.CONTACT_COLLECTION)
+	svc := service.NewContactService(service.NewMongoCollectionAdapter(col))
+	return &ContactController{svc: svc}
 }
 
 func (cc *ContactController) Find(c echo.Context) error {
@@ -35,8 +42,7 @@ func (cc *ContactController) Find(c echo.Context) error {
 		query.Keyword = &keyword
 	}
 
-	s := &service.ContactService{}
-	contacts, count, err := s.Find(query)
+	contacts, count, err := cc.svc.Find(query)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
@@ -49,8 +55,7 @@ func (cc *ContactController) Find(c echo.Context) error {
 
 func (cc *ContactController) FindOne(c echo.Context) error {
 	id := c.Param("id")
-	s := &service.ContactService{}
-	contact, err := s.FindOne(id)
+	contact, err := cc.svc.FindOne(id)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
@@ -62,8 +67,7 @@ func (cc *ContactController) Create(c echo.Context) error {
 	if err := c.Bind(&dto); err != nil {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
-	var service = &service.ContactService{}
-	record, err := service.Create(dto)
+	record, err := cc.svc.Create(dto)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
@@ -77,9 +81,8 @@ func (cc *ContactController) Update(c echo.Context) error {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
 	dto.ID = id
-	var service = &service.ContactService{}
 	claim := c.Get("CLAIM").(*model.JwtCustomClaims)
-	record, err := service.Update(dto, claim)
+	record, err := cc.svc.Update(dto, claim)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
@@ -88,9 +91,8 @@ func (cc *ContactController) Update(c echo.Context) error {
 
 func (cc *ContactController) Remove(c echo.Context) error {
 	id := c.Param("id")
-	var service = &service.ContactService{}
 	claim := c.Get("CLAIM").(*model.JwtCustomClaims)
-	record, err := service.Remove(id, claim)
+	record, err := cc.svc.Remove(id, claim)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}

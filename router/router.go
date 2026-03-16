@@ -57,4 +57,13 @@ func InitializeRoutes(e *echo.Echo) {
 	personalizedRandomGroup := e.Group("/personalized-random")
 	UsePersonalizedRandomRouter(personalizedRandomGroup)
 
+	foodShopGroup := e.Group("/food-shop")
+	UseFoodShopRouter(foodShopGroup)
+
+	foodShopDishGroup := e.Group("/food-shop-dish")
+	UseFoodShopDishRouter(foodShopDishGroup)
+
+	userDishLocationGroup := e.Group("/user-dish-location")
+	UseUserDishLocationRouter(userDishLocationGroup)
+
 }

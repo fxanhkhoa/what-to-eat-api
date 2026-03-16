@@ -8,6 +8,20 @@ and
 go generate ./...
 ```
 
+## Run unit tests
+Run all tests:
+```
+go test ./...
+```
+Run with verbose output:
+```
+go test -v ./...
+```
+Run a specific test:
+```
+go test -v -run TestCustomValidator ./...
+```
+
 ## Start application
 1. Install nodemon
    ```
