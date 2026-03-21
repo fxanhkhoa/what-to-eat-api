@@ -22,7 +22,8 @@ type User struct {
 	CreatedAt   *time.Time `json:"createdAt,omitempty" bson:"createdAt"`
 	CreatedBy   *string    `json:"createdBy,omitempty" bson:"createdBy"`
 	ID          string     `json:"_id" bson:"_id,omitempty"`
-	RoleName    string     `json:"roleName" bson:"roleName"`
+	RoleName     string        `json:"roleName" bson:"roleName"`
+	DeviceTokens []DeviceToken `json:"deviceTokens,omitempty" bson:"deviceTokens,omitempty"`
 }
 
 type QueryUserDto struct {

@@ -190,20 +190,30 @@ func (u *UserService) Update(updateUserInput model.UpdateUserDto, profile *model
 	}
 	filter := bson.M{"_id": objectID, "deleted": false}
 
-	options := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
-	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": bson.D{
+	updateFields := bson.D{
 		{Key: "email", Value: updateUserInput.Email},
 		{Key: "name", Value: updateUserInput.Name},
 		{Key: "dateOfBirth", Value: updateUserInput.DateOfBirth},
 		{Key: "address", Value: updateUserInput.Address},
 		{Key: "phone", Value: updateUserInput.Phone},
-		{Key: "googleID", Value: updateUserInput.GoogleID},
-		{Key: "facebookID", Value: updateUserInput.FacebookID},
-		{Key: "githubID", Value: updateUserInput.GithubID},
-		{Key: "avatar", Value: updateUserInput.Avatar},
 		{Key: "updatedAt", Value: &now},
 		{Key: "updatedBy", Value: &profile.ID},
-	}}, options)
+	}
+	if updateUserInput.GoogleID != nil {
+		updateFields = append(updateFields, bson.E{Key: "googleID", Value: updateUserInput.GoogleID})
+	}
+	if updateUserInput.FacebookID != nil {
+		updateFields = append(updateFields, bson.E{Key: "facebookID", Value: updateUserInput.FacebookID})
+	}
+	if updateUserInput.GithubID != nil {
+		updateFields = append(updateFields, bson.E{Key: "githubID", Value: updateUserInput.GithubID})
+	}
+	if updateUserInput.Avatar != nil {
+		updateFields = append(updateFields, bson.E{Key: "avatar", Value: updateUserInput.Avatar})
+	}
+
+	options := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
+	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": updateFields}, options)
 	if result.Err() != nil {
 		return nil, result.Err()
 	}

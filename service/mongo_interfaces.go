@@ -26,6 +26,8 @@ type CollectionInterface interface {
 	CountDocuments(ctx context.Context, filter interface{}, opts ...*options.CountOptions) (int64, error)
 	Find(ctx context.Context, filter interface{}, opts ...*options.FindOptions) (Cursor, error)
 	FindOne(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) SingleResult
+	UpdateOne(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+	UpdateMany(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
 }
 
 // mongoCollectionAdapter wraps *mongo.Collection to implement CollectionInterface.
@@ -56,4 +58,12 @@ func (a *mongoCollectionAdapter) Find(ctx context.Context, filter interface{}, o
 
 func (a *mongoCollectionAdapter) FindOne(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) SingleResult {
 	return a.col.FindOne(ctx, filter, opts...)
+}
+
+func (a *mongoCollectionAdapter) UpdateOne(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+	return a.col.UpdateOne(ctx, filter, update, opts...)
+}
+
+func (a *mongoCollectionAdapter) UpdateMany(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+	return a.col.UpdateMany(ctx, filter, update, opts...)
 }

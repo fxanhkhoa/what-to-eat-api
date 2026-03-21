@@ -83,6 +83,10 @@ const REMOVE_FOOD_SHOP_DISH = "REMOVE_FOOD_SHOP_DISH"
 
 const MANAGE_USER_DISH_LOCATIONS = "MANAGE_USER_DISH_LOCATIONS"
 
+const MANAGE_NOTIFICATIONS = "MANAGE_NOTIFICATIONS"
+const VIEW_NOTIFICATIONS = "VIEW_NOTIFICATIONS"
+const SEND_NOTIFICATIONS = "SEND_NOTIFICATIONS"
+
 // GetAllPermissions returns all available permissions as a slice
 func GetAllPermissions() []string {
 	return []string{
@@ -186,5 +190,10 @@ func GetAllPermissions() []string {
 
 		// User dish location permissions
 		MANAGE_USER_DISH_LOCATIONS,
+
+		// Notification permissions
+		MANAGE_NOTIFICATIONS,
+		VIEW_NOTIFICATIONS,
+		SEND_NOTIFICATIONS,
 	}
 }

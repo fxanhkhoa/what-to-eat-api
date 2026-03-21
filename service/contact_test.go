@@ -93,6 +93,14 @@ func (m *mockCollection) FindOne(ctx context.Context, filter interface{}, opts .
 	return m.findOneResult
 }
 
+func (m *mockCollection) UpdateOne(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+	return nil, nil
+}
+
+func (m *mockCollection) UpdateMany(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+	return nil, nil
+}
+
 // ---------------------------------------------------------------------------
 // Create tests
 // ---------------------------------------------------------------------------
