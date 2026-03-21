@@ -50,11 +50,15 @@ func (ns *NotificationService) RegisterDeviceToken(userID string, dto model.Regi
 	}
 
 	// Remove any existing entry for this token first to avoid duplicates
-	_, _ = ns.userCol.UpdateOne(
+	_, err = ns.userCol.UpdateOne(
 		context.TODO(),
 		bson.M{"_id": userObjID},
 		bson.M{"$pull": bson.M{"deviceTokens": bson.M{"token": dto.Token}}},
 	)
+
+	if err != nil {
+		return err
+	}
 
 	token := model.DeviceToken{
 		Token:      dto.Token,
@@ -66,7 +70,7 @@ func (ns *NotificationService) RegisterDeviceToken(userID string, dto model.Regi
 
 	_, err = ns.userCol.UpdateOne(
 		context.TODO(),
-		bson.M{"_id": userObjID},
+		bson.M{"_id": userObjID, "deleted": false},
 		bson.M{"$push": bson.M{"deviceTokens": token}},
 	)
 
@@ -96,7 +100,7 @@ func (ns *NotificationService) GetDeviceTokens(userID string) ([]model.DeviceTok
 	}
 	err = ns.userCol.FindOne(
 		context.TODO(),
-		bson.M{"_id": userObjID},
+		bson.M{"_id": userObjID, "deleted": false},
 		options.FindOne().SetProjection(bson.M{"deviceTokens": 1}),
 	).Decode(&user)
 	if err != nil {
@@ -132,7 +136,9 @@ func (ns *NotificationService) GetUserPreferences(userID string) (*model.Notific
 // UpdateUserPreferences updates notification preferences for a user
 func (ns *NotificationService) UpdateUserPreferences(userID string, dto model.UpdateNotificationPreferenceDto) (*model.NotificationPreference, error) {
 	// Ensure preferences doc exists
-	ns.GetUserPreferences(userID)
+	if _, err := ns.GetUserPreferences(userID); err != nil {
+		return nil, err
+	}
 
 	update := bson.M{}
 	if dto.ChatEnabled != nil {
@@ -257,7 +263,7 @@ func (ns *NotificationService) SendMulticast(tokens []string, title, body, image
 			Notification: &messaging.WebpushNotification{
 				Title: title,
 				Body:  body,
-				Icon:  "../assets/icons/logo-128x128.png",
+				Icon:  "/assets/icons/logo-128x128.png",
 			},
 		},
 	}
@@ -270,8 +276,11 @@ func (ns *NotificationService) SendMulticast(tokens []string, title, body, image
 	// Clean up invalid tokens
 	if response.FailureCount > 0 {
 		for i, result := range response.Responses {
-			if !result.Success && i < len(tokens) {
-				ns.cleanupInvalidToken(tokens[i])
+			if !result.Success && i < len(tokens) && result.Error != nil {
+				// Only remove tokens that are clearly invalid/unregistered. Other errors may be transient.
+				if messaging.IsUnregistered(result.Error) || messaging.IsInvalidArgument(result.Error) {
+					ns.cleanupInvalidToken(tokens[i])
+				}
 			}
 		}
 	}
@@ -318,7 +327,10 @@ func (ns *NotificationService) saveNotification(
 		SentAt:    &now,
 		SendError: sendError,
 	}
-	ns.notifCol.InsertOne(context.TODO(), notif)
+	_, err := ns.notifCol.InsertOne(context.TODO(), notif)
+	if err != nil {
+		fmt.Printf("Error inserting notification: %v\n", err)
+	}
 }
 
 // GetUserNotifications returns paginated notifications for a user

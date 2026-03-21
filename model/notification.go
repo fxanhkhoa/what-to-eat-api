@@ -13,7 +13,7 @@ type Notification struct {
 	SentAt    *time.Time        `json:"sentAt,omitempty" bson:"sentAt,omitempty"`
 	ReadAt    *time.Time        `json:"readAt,omitempty" bson:"readAt,omitempty"`
 	ClickedAt *time.Time        `json:"clickedAt,omitempty" bson:"clickedAt,omitempty"`
-	SendError *string           `json:"resultFromFirebase,omitempty" bson:"resultFromFirebase,omitempty"`
+	SendError *string           `json:"sendError,omitempty" bson:"sendError,omitempty"`
 }
 
 type NotificationPreference struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -68,5 +69,5 @@ func InitFirebase() {
 	}
 	FirebaseMessagingClient = msgClient
 
-	fmt.Println("Firebase initialized successfully")
+	log.Println("Firebase: initialized successfully (app, auth, messaging)")
 }
