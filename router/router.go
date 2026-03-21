@@ -66,4 +66,7 @@ func InitializeRoutes(e *echo.Echo) {
 	userDishLocationGroup := e.Group("/user-dish-location")
 	UseUserDishLocationRouter(userDishLocationGroup)
 
+	notificationGroup := e.Group("/notification")
+	UseNotificationRouter(notificationGroup)
+
 }
