@@ -28,6 +28,7 @@ type CollectionInterface interface {
 	FindOne(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) SingleResult
 	UpdateOne(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
 	UpdateMany(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+	DeleteOne(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
 }
 
 // mongoCollectionAdapter wraps *mongo.Collection to implement CollectionInterface.
@@ -66,4 +67,8 @@ func (a *mongoCollectionAdapter) UpdateOne(ctx context.Context, filter interface
 
 func (a *mongoCollectionAdapter) UpdateMany(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 	return a.col.UpdateMany(ctx, filter, update, opts...)
+}
+
+func (a *mongoCollectionAdapter) DeleteOne(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
+	return a.col.DeleteOne(ctx, filter, opts...)
 }

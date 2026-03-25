@@ -101,6 +101,10 @@ func (m *mockCollection) UpdateMany(ctx context.Context, filter interface{}, upd
 	return nil, nil
 }
 
+func (m *mockCollection) DeleteOne(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
+	return &mongo.DeleteResult{DeletedCount: 1}, nil
+}
+
 // ---------------------------------------------------------------------------
 // Create tests
 // ---------------------------------------------------------------------------

@@ -27,6 +27,22 @@ func UseNotificationRouter(group *echo.Group) {
 	group.GET("/preferences/", ctrl.GetPreferences, aG.AuthGuard, rG.RoleGuard([]string{constants.MANAGE_NOTIFICATIONS}))
 	group.PUT("/preferences/", ctrl.UpdatePreferences, aG.AuthGuard, rG.RoleGuard([]string{constants.MANAGE_NOTIFICATIONS}))
 
-	// Admin: send notification manually
+	// Admin: send notification manually to a single user
 	group.POST("/send/", ctrl.Send, aG.AuthGuard, rG.RoleGuard([]string{constants.SEND_NOTIFICATIONS}))
+
+	// Admin: broadcast to all users
+	group.POST("/broadcast/", ctrl.SendBroadcast, aG.AuthGuard, rG.RoleGuard([]string{constants.BROADCAST_NOTIFICATIONS}))
+
+	// Admin: send to user segment
+	group.POST("/segment/", ctrl.SendSegment, aG.AuthGuard, rG.RoleGuard([]string{constants.BROADCAST_NOTIFICATIONS}))
+
+	// Admin: broadcast / segment logs
+	group.GET("/admin/logs/", ctrl.GetAdminLogs, aG.AuthGuard, rG.RoleGuard([]string{constants.SEND_NOTIFICATIONS}))
+
+	// Admin: notification templates
+	group.POST("/templates/", ctrl.CreateTemplate, aG.AuthGuard, rG.RoleGuard([]string{constants.MANAGE_NOTIFICATION_TEMPLATES}))
+	group.GET("/templates/", ctrl.GetTemplates, aG.AuthGuard, rG.RoleGuard([]string{constants.MANAGE_NOTIFICATION_TEMPLATES}))
+	group.GET("/templates/:id/", ctrl.GetTemplate, aG.AuthGuard, rG.RoleGuard([]string{constants.MANAGE_NOTIFICATION_TEMPLATES}))
+	group.PUT("/templates/:id/", ctrl.UpdateTemplate, aG.AuthGuard, rG.RoleGuard([]string{constants.MANAGE_NOTIFICATION_TEMPLATES}))
+	group.DELETE("/templates/:id/", ctrl.DeleteTemplate, aG.AuthGuard, rG.RoleGuard([]string{constants.MANAGE_NOTIFICATION_TEMPLATES}))
 }

@@ -17,16 +17,24 @@ import (
 )
 
 type NotificationService struct {
-	notifCol CollectionInterface
-	prefCol  CollectionInterface
-	userCol  CollectionInterface
+	notifCol     CollectionInterface
+	prefCol      CollectionInterface
+	userCol      CollectionInterface
+	templateCol  CollectionInterface
+	adminLogCol  CollectionInterface
+	userLoginCol CollectionInterface
 }
 
 func NewNotificationService(notifCol, prefCol, userCol CollectionInterface) *NotificationService {
+	dbName := config.GetDBInstance().GetDbName()
+	db := config.GetDBInstance().GetClient().Database(dbName)
 	return &NotificationService{
-		notifCol: notifCol,
-		prefCol:  prefCol,
-		userCol:  userCol,
+		notifCol:     notifCol,
+		prefCol:      prefCol,
+		userCol:      userCol,
+		templateCol:  NewMongoCollectionAdapter(db.Collection(constants.NOTIFICATION_TEMPLATE_COLLECTION)),
+		adminLogCol:  NewMongoCollectionAdapter(db.Collection(constants.ADMIN_NOTIFICATION_LOG_COLLECTION)),
+		userLoginCol: NewMongoCollectionAdapter(db.Collection(constants.USER_LOGIN_TRACKS_COLLECTION)),
 	}
 }
 
@@ -34,9 +42,12 @@ func NewNotificationServiceFromDB() *NotificationService {
 	dbName := config.GetDBInstance().GetDbName()
 	db := config.GetDBInstance().GetClient().Database(dbName)
 	return &NotificationService{
-		notifCol: NewMongoCollectionAdapter(db.Collection(constants.NOTIFICATION_COLLECTION)),
-		prefCol:  NewMongoCollectionAdapter(db.Collection(constants.NOTIFICATION_PREFERENCE_COLLECTION)),
-		userCol:  NewMongoCollectionAdapter(db.Collection(constants.USER_COLLECTION)),
+		notifCol:     NewMongoCollectionAdapter(db.Collection(constants.NOTIFICATION_COLLECTION)),
+		prefCol:      NewMongoCollectionAdapter(db.Collection(constants.NOTIFICATION_PREFERENCE_COLLECTION)),
+		userCol:      NewMongoCollectionAdapter(db.Collection(constants.USER_COLLECTION)),
+		templateCol:  NewMongoCollectionAdapter(db.Collection(constants.NOTIFICATION_TEMPLATE_COLLECTION)),
+		adminLogCol:  NewMongoCollectionAdapter(db.Collection(constants.ADMIN_NOTIFICATION_LOG_COLLECTION)),
+		userLoginCol: NewMongoCollectionAdapter(db.Collection(constants.USER_LOGIN_TRACKS_COLLECTION)),
 	}
 }
 
@@ -399,4 +410,420 @@ func (ns *NotificationService) cleanupInvalidToken(token string) {
 		bson.M{"deviceTokens.token": token},
 		bson.M{"$pull": bson.M{"deviceTokens": bson.M{"token": token}}},
 	)
+}
+
+// ─── Broadcast ───────────────────────────────────────────────────────────────
+
+// SendBroadcast fans out a notification to all users with registered device tokens.
+// If dto.ScheduledAt is set and is in the future the notification is stored as
+// "pending" and dispatched later by StartScheduler.
+func (ns *NotificationService) SendBroadcast(dto model.SendBroadcastDto, createdBy string) error {
+	now := time.Now()
+	if dto.ScheduledAt != nil && dto.ScheduledAt.After(now) {
+		return ns.scheduleAdminLog("all", nil, dto.Title, dto.Body, dto.ImageURL, dto.Type, dto.Data, dto.ScheduledAt, createdBy)
+	}
+	return ns.executeBroadcast(dto.Title, dto.Body, dto.ImageURL, dto.Type, dto.Data, createdBy)
+}
+
+func (ns *NotificationService) executeBroadcast(title, body, imageURL, notifType string, data map[string]string, createdBy string) error {
+	tokens, err := ns.getAllDeviceTokens()
+	if err != nil {
+		return err
+	}
+	totalSent, totalFailed := ns.fanOutMulticast(tokens, title, body, imageURL, data)
+	return ns.saveAdminLog("all", nil, title, body, imageURL, notifType, data, nil, totalSent, totalFailed, createdBy)
+}
+
+// getAllDeviceTokens returns every FCM token across all non-deleted users
+func (ns *NotificationService) getAllDeviceTokens() ([]string, error) {
+	cursor, err := ns.userCol.Find(
+		context.TODO(),
+		bson.M{"deleted": false, "deviceTokens": bson.M{"$exists": true, "$ne": bson.A{}}},
+		options.Find().SetProjection(bson.M{"deviceTokens": 1}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.TODO())
+
+	var users []model.User
+	if err := cursor.All(context.TODO(), &users); err != nil {
+		return nil, err
+	}
+
+	var tokens []string
+	for _, u := range users {
+		for _, dt := range u.DeviceTokens {
+			tokens = append(tokens, dt.Token)
+		}
+	}
+	return tokens, nil
+}
+
+// fanOutMulticast sends msg to all tokens in batches of 500 (FCM limit).
+// Returns (totalSent, totalFailed).
+func (ns *NotificationService) fanOutMulticast(tokens []string, title, body, imageURL string, data map[string]string) (int, int) {
+	const batchSize = 500
+	totalSent, totalFailed := 0, 0
+	for i := 0; i < len(tokens); i += batchSize {
+		end := i + batchSize
+		if end > len(tokens) {
+			end = len(tokens)
+		}
+		batch := tokens[i:end]
+		if err := ns.SendMulticast(batch, title, body, imageURL, data); err != nil {
+			totalFailed += len(batch)
+		} else {
+			totalSent += len(batch)
+		}
+	}
+	return totalSent, totalFailed
+}
+
+// ─── Segment ─────────────────────────────────────────────────────────────────
+
+// SendToSegment fans out a notification to users matching SegmentFilter.
+// Respects ScheduledAt the same way as SendBroadcast.
+func (ns *NotificationService) SendToSegment(dto model.SendSegmentDto, createdBy string) error {
+	now := time.Now()
+	sf := dto.SegmentFilter
+	if dto.ScheduledAt != nil && dto.ScheduledAt.After(now) {
+		return ns.scheduleAdminLog("segment", &sf, dto.Title, dto.Body, dto.ImageURL, dto.Type, dto.Data, dto.ScheduledAt, createdBy)
+	}
+	return ns.executeSegment(sf, dto.Title, dto.Body, dto.ImageURL, dto.Type, dto.Data, createdBy)
+}
+
+func (ns *NotificationService) executeSegment(sf model.SegmentFilter, title, body, imageURL, notifType string, data map[string]string, createdBy string) error {
+	tokens, err := ns.getSegmentTokens(sf)
+	if err != nil {
+		return err
+	}
+	totalSent, totalFailed := ns.fanOutMulticast(tokens, title, body, imageURL, data)
+	return ns.saveAdminLog("segment", &sf, title, body, imageURL, notifType, data, nil, totalSent, totalFailed, createdBy)
+}
+
+// getSegmentTokens builds a MongoDB user query from a SegmentFilter and returns tokens
+func (ns *NotificationService) getSegmentTokens(sf model.SegmentFilter) ([]string, error) {
+	filter := bson.M{"deleted": false, "deviceTokens": bson.M{"$exists": true, "$ne": bson.A{}}}
+
+	// Role filter
+	if len(sf.RoleNames) > 0 {
+		filter["roleName"] = bson.M{"$in": sf.RoleNames}
+	}
+
+	// Inactive filter: users whose last login is older than InactiveDays
+	if sf.InactiveDays != nil && *sf.InactiveDays > 0 {
+		cutoff := time.Now().AddDate(0, 0, -*sf.InactiveDays)
+		activeCursor, err := ns.userLoginCol.Find(
+			context.TODO(),
+			bson.M{"createdAt": bson.M{"$gte": cutoff}},
+			options.Find().SetProjection(bson.M{"userId": 1}),
+		)
+		if err != nil {
+			return nil, err
+		}
+		defer activeCursor.Close(context.TODO())
+		type loginTrack struct {
+			UserID string `bson:"userId"`
+		}
+		var tracks []loginTrack
+		if err := activeCursor.All(context.TODO(), &tracks); err != nil {
+			return nil, err
+		}
+		active := make(map[string]struct{}, len(tracks))
+		for _, t := range tracks {
+			active[t.UserID] = struct{}{}
+		}
+		// We want users NOT in the active set (inactive)
+		var inactiveIDs []primitive.ObjectID
+		allCursor, err := ns.userCol.Find(
+			context.TODO(),
+			bson.M{"deleted": false},
+			options.Find().SetProjection(bson.M{"_id": 1}),
+		)
+		if err != nil {
+			return nil, err
+		}
+		defer allCursor.Close(context.TODO())
+		type userID struct {
+			ID primitive.ObjectID `bson:"_id"`
+		}
+		var allUsers []userID
+		if err := allCursor.All(context.TODO(), &allUsers); err != nil {
+			return nil, err
+		}
+		for _, u := range allUsers {
+			if _, isActive := active[u.ID.Hex()]; !isActive {
+				inactiveIDs = append(inactiveIDs, u.ID)
+			}
+		}
+		filter["_id"] = bson.M{"$in": inactiveIDs}
+	}
+
+	cursor, err := ns.userCol.Find(
+		context.TODO(),
+		filter,
+		options.Find().SetProjection(bson.M{"deviceTokens": 1}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.TODO())
+
+	var users []model.User
+	if err := cursor.All(context.TODO(), &users); err != nil {
+		return nil, err
+	}
+	var tokens []string
+	for _, u := range users {
+		for _, dt := range u.DeviceTokens {
+			tokens = append(tokens, dt.Token)
+		}
+	}
+	return tokens, nil
+}
+
+// ─── Scheduler ───────────────────────────────────────────────────────────────
+
+// scheduleAdminLog saves a "pending" log entry for future dispatch
+func (ns *NotificationService) scheduleAdminLog(
+	sentTo string,
+	sf *model.SegmentFilter,
+	title, body, imageURL, notifType string,
+	data map[string]string,
+	scheduledAt *time.Time,
+	createdBy string,
+) error {
+	log := model.AdminNotificationLog{
+		Title:         title,
+		Body:          body,
+		ImageURL:      imageURL,
+		Type:          notifType,
+		Data:          data,
+		SentTo:        sentTo,
+		SegmentFilter: sf,
+		ScheduledAt:   scheduledAt,
+		CreatedBy:     createdBy,
+	}
+	_, err := ns.adminLogCol.InsertOne(context.TODO(), log)
+	return err
+}
+
+// saveAdminLog persists a completed admin send event
+func (ns *NotificationService) saveAdminLog(
+	sentTo string,
+	sf *model.SegmentFilter,
+	title, body, imageURL, notifType string,
+	data map[string]string,
+	scheduledAt *time.Time,
+	totalSent, totalFailed int,
+	createdBy string,
+) error {
+	now := time.Now()
+	log := model.AdminNotificationLog{
+		Title:         title,
+		Body:          body,
+		ImageURL:      imageURL,
+		Type:          notifType,
+		Data:          data,
+		SentTo:        sentTo,
+		SegmentFilter: sf,
+		ScheduledAt:   scheduledAt,
+		SentAt:        &now,
+		TotalSent:     totalSent,
+		TotalFailed:   totalFailed,
+		CreatedBy:     createdBy,
+	}
+	_, err := ns.adminLogCol.InsertOne(context.TODO(), log)
+	return err
+}
+
+// StartScheduler runs a background goroutine that dispatches pending scheduled
+// admin notifications every minute.
+func (ns *NotificationService) StartScheduler(ctx context.Context) {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			ns.dispatchPending()
+		}
+	}
+}
+
+func (ns *NotificationService) dispatchPending() {
+	now := time.Now()
+	filter := bson.M{
+		"sentAt":      nil,
+		"scheduledAt": bson.M{"$lte": now},
+	}
+	cursor, err := ns.adminLogCol.Find(context.TODO(), filter, options.Find())
+	if err != nil {
+		fmt.Printf("[Scheduler] find pending error: %v\n", err)
+		return
+	}
+	defer cursor.Close(context.TODO())
+
+	var logs []model.AdminNotificationLog
+	if err := cursor.All(context.TODO(), &logs); err != nil {
+		fmt.Printf("[Scheduler] decode error: %v\n", err)
+		return
+	}
+
+	for _, log := range logs {
+		var sendErr error
+		if log.SentTo == "all" {
+			sendErr = ns.executeBroadcast(log.Title, log.Body, log.ImageURL, log.Type, log.Data, log.CreatedBy)
+		} else if log.SentTo == "segment" && log.SegmentFilter != nil {
+			sendErr = ns.executeSegment(*log.SegmentFilter, log.Title, log.Body, log.ImageURL, log.Type, log.Data, log.CreatedBy)
+		}
+		if sendErr != nil {
+			fmt.Printf("[Scheduler] dispatch error for log %s: %v\n", log.ID, sendErr)
+			continue
+		}
+		// Delete the pending entry now that it was dispatched
+		if oid, oErr := primitive.ObjectIDFromHex(log.ID); oErr == nil {
+			ns.adminLogCol.UpdateOne(
+				context.TODO(),
+				bson.M{"_id": oid},
+				bson.M{"$set": bson.M{"sentAt": time.Now()}},
+			)
+		}
+	}
+}
+
+// GetAdminLogs returns paginated admin notification logs
+func (ns *NotificationService) GetAdminLogs(page, limit int, sentTo string) ([]model.AdminNotificationLog, int64, error) {
+	filter := bson.M{}
+	if sentTo != "" {
+		filter["sentTo"] = sentTo
+	}
+	total, err := ns.adminLogCol.CountDocuments(context.TODO(), filter)
+	if err != nil {
+		return nil, 0, err
+	}
+	skip := int64((page - 1) * limit)
+	opts := options.Find().
+		SetSort(bson.D{{Key: "sentAt", Value: -1}, {Key: "scheduledAt", Value: -1}}).
+		SetSkip(skip).
+		SetLimit(int64(limit))
+	cursor, err := ns.adminLogCol.Find(context.TODO(), filter, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(context.TODO())
+	var logs []model.AdminNotificationLog
+	if err := cursor.All(context.TODO(), &logs); err != nil {
+		return nil, 0, err
+	}
+	return logs, total, nil
+}
+
+// ─── Templates ───────────────────────────────────────────────────────────────
+
+func (ns *NotificationService) CreateTemplate(dto model.CreateNotificationTemplateDto, createdBy string) (*model.NotificationTemplate, error) {
+	now := time.Now()
+	tmpl := model.NotificationTemplate{
+		Name:      dto.Name,
+		Title:     dto.Title,
+		Body:      dto.Body,
+		ImageURL:  dto.ImageURL,
+		Type:      dto.Type,
+		Data:      dto.Data,
+		CreatedAt: &now,
+		CreatedBy: createdBy,
+		UpdatedAt: &now,
+	}
+	result, err := ns.templateCol.InsertOne(context.TODO(), tmpl)
+	if err != nil {
+		return nil, err
+	}
+	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
+		tmpl.ID = oid.Hex()
+	}
+	return &tmpl, nil
+}
+
+func (ns *NotificationService) GetTemplates(page, limit int) ([]model.NotificationTemplate, int64, error) {
+	filter := bson.M{}
+	total, err := ns.templateCol.CountDocuments(context.TODO(), filter)
+	if err != nil {
+		return nil, 0, err
+	}
+	skip := int64((page - 1) * limit)
+	opts := options.Find().
+		SetSort(bson.D{{Key: "createdAt", Value: -1}}).
+		SetSkip(skip).
+		SetLimit(int64(limit))
+	cursor, err := ns.templateCol.Find(context.TODO(), filter, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(context.TODO())
+	var templates []model.NotificationTemplate
+	if err := cursor.All(context.TODO(), &templates); err != nil {
+		return nil, 0, err
+	}
+	return templates, total, nil
+}
+
+func (ns *NotificationService) GetTemplateByID(id string) (*model.NotificationTemplate, error) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid template ID: %w", err)
+	}
+	var tmpl model.NotificationTemplate
+	if err := ns.templateCol.FindOne(context.TODO(), bson.M{"_id": oid}).Decode(&tmpl); err != nil {
+		return nil, err
+	}
+	return &tmpl, nil
+}
+
+func (ns *NotificationService) UpdateTemplate(id string, dto model.UpdateNotificationTemplateDto) (*model.NotificationTemplate, error) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid template ID: %w", err)
+	}
+	now := time.Now()
+	update := bson.M{"updatedAt": now}
+	if dto.Name != nil {
+		update["name"] = *dto.Name
+	}
+	if dto.Title != nil {
+		update["title"] = *dto.Title
+	}
+	if dto.Body != nil {
+		update["body"] = *dto.Body
+	}
+	if dto.ImageURL != nil {
+		update["imageUrl"] = *dto.ImageURL
+	}
+	if dto.Type != nil {
+		update["type"] = *dto.Type
+	}
+	if dto.Data != nil {
+		update["data"] = dto.Data
+	}
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
+	var updated model.NotificationTemplate
+	if err := ns.templateCol.FindOneAndUpdate(
+		context.TODO(),
+		bson.M{"_id": oid},
+		bson.M{"$set": update},
+		opts,
+	).Decode(&updated); err != nil {
+		return nil, err
+	}
+	return &updated, nil
+}
+
+func (ns *NotificationService) DeleteTemplate(id string) error {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return fmt.Errorf("invalid template ID: %w", err)
+	}
+	_, err = ns.templateCol.DeleteOne(context.TODO(), bson.M{"_id": oid})
+	return err
 }
