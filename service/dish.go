@@ -17,7 +17,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type DishService struct{}
+type DishService struct {
+	col CollectionInterface
+}
 
 func (s *DishService) Collection() *mongo.Collection {
 	dbName := config.GetDBInstance().GetDbName()
@@ -25,8 +27,21 @@ func (s *DishService) Collection() *mongo.Collection {
 	return col
 }
 
+// NewDishService creates a DishService with a pre-configured CollectionInterface (useful for testing).
+func NewDishService(col CollectionInterface) *DishService {
+	return &DishService{col: col}
+}
+
+// getCol returns the injected collection or wraps the real MongoDB collection.
+func (ds *DishService) getCol() CollectionInterface {
+	if ds.col != nil {
+		return ds.col
+	}
+	return NewMongoCollectionAdapter(ds.Collection())
+}
+
 func (ds *DishService) Create(createDishInput model.CreateDishDto, profile *model.JwtCustomClaims) (*model.Dish, error) {
-	collection := ds.Collection()
+	collection := ds.getCol()
 
 	now := time.Now()
 
@@ -64,7 +79,7 @@ func (ds *DishService) Create(createDishInput model.CreateDishDto, profile *mode
 }
 
 func (ds *DishService) Update(updateDishInput model.UpdateDishDto, profile *model.JwtCustomClaims) (*model.Dish, error) {
-	collection := ds.Collection()
+	collection := ds.getCol()
 
 	now := time.Now()
 
@@ -104,7 +119,7 @@ func (ds *DishService) Update(updateDishInput model.UpdateDishDto, profile *mode
 }
 
 func (ds *DishService) Remove(id string, profile *model.JwtCustomClaims) (*model.Dish, error) {
-	collection := ds.Collection()
+	collection := ds.getCol()
 	now := time.Now()
 
 	objectID, err := primitive.ObjectIDFromHex(id)
@@ -128,7 +143,7 @@ func (ds *DishService) Remove(id string, profile *model.JwtCustomClaims) (*model
 }
 
 func (ds *DishService) Find(query model.QueryDishDto) ([]*model.Dish, int64, error) {
-	collection := ds.Collection()
+	collection := ds.getCol()
 	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(query.Page) - 1) * int64(query.Limit)).SetLimit(int64(query.Limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
 
@@ -201,7 +216,7 @@ func (ds *DishService) Find(query model.QueryDishDto) ([]*model.Dish, int64, err
 
 // FindWithScore provides Google-like search with advanced relevance scoring
 func (ds *DishService) FindWithScore(query model.QueryDishDto) ([]*model.Dish, int64, error) {
-	collection := ds.Collection()
+	collection := ds.getCol()
 
 	// If no search keyword, fall back to regular Find with filters
 	if query.Keyword == nil || *query.Keyword == "" {
@@ -1188,7 +1203,7 @@ func (ds *DishService) FindSuggestions(keyword string, limit int) ([]string, err
 		return []string{}, nil
 	}
 
-	collection := ds.Collection()
+	collection := ds.getCol()
 	regexPattern := primitive.Regex{Pattern: "^" + regexp.QuoteMeta(keyword), Options: "i"} // Starts with keyword
 
 	pipeline := mongo.Pipeline{
@@ -1257,7 +1272,7 @@ func (ds *DishService) FindSuggestions(keyword string, limit int) ([]string, err
 }
 
 func (ds *DishService) FindOne(id string) (*model.Dish, error) {
-	collection := ds.Collection()
+	collection := ds.getCol()
 
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -1275,7 +1290,7 @@ func (ds *DishService) FindOne(id string) (*model.Dish, error) {
 }
 
 func (ds *DishService) FindOneBySlug(slug string) (*model.Dish, error) {
-	collection := ds.Collection()
+	collection := ds.getCol()
 	filter := bson.M{"slug": slug}
 	result := collection.FindOne(context.TODO(), filter)
 	if result.Err() != nil {
@@ -1287,7 +1302,7 @@ func (ds *DishService) FindOneBySlug(slug string) (*model.Dish, error) {
 }
 
 func (ds *DishService) Random(query model.QueryDishRandomDto) ([]*model.Dish, error) {
-	collection := ds.Collection()
+	collection := ds.getCol()
 	stages := []bson.D{}
 	matchStage := bson.D{{Key: "deleted", Value: false}}
 	if query.MealCategories != nil && len(*query.MealCategories) > 0 {
@@ -1309,7 +1324,7 @@ func (ds *DishService) Random(query model.QueryDishRandomDto) ([]*model.Dish, er
 }
 
 func (ds *DishService) Analyze() (map[string]interface{}, error) {
-	collection := ds.Collection()
+	collection := ds.getCol()
 
 	pipeline := mongo.Pipeline{
 		// Only non-deleted dishes

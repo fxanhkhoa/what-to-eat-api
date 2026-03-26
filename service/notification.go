@@ -639,8 +639,13 @@ func (ns *NotificationService) saveAdminLog(
 }
 
 // StartScheduler runs a background goroutine that dispatches pending scheduled
-// admin notifications every minute.
+// admin notifications. It fires immediately on startup (so any notifications
+// scheduled while the instance was down are sent right away), then continues
+// polling MongoDB every minute via a ticker.
 func (ns *NotificationService) StartScheduler(ctx context.Context) {
+	// Dispatch immediately on startup — catches overdue jobs after a restart
+	ns.dispatchPending()
+
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 	for {
@@ -673,6 +678,7 @@ func (ns *NotificationService) dispatchPending() {
 	}
 
 	for _, log := range logs {
+		fmt.Println("[Scheduler] dispatching log ID:", log.ID.Hex())
 		var sendErr error
 		if log.SentTo == "all" {
 			sendErr = ns.executeBroadcast(log.Title, log.Body, log.ImageURL, log.Type, log.Data, log.CreatedBy)
@@ -683,11 +689,11 @@ func (ns *NotificationService) dispatchPending() {
 			fmt.Printf("[Scheduler] dispatch error for log %s: %v\n", log.ID, sendErr)
 			continue
 		}
-		// Delete the pending entry now that it was dispatched
-		if oid, oErr := primitive.ObjectIDFromHex(log.ID); oErr == nil {
+		// Mark the pending entry as sent
+		if !log.ID.IsZero() {
 			ns.adminLogCol.UpdateOne(
 				context.TODO(),
-				bson.M{"_id": oid},
+				bson.M{"_id": log.ID},
 				bson.M{"$set": bson.M{"sentAt": time.Now()}},
 			)
 		}

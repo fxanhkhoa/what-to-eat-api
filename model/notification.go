@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type Notification struct {
 	ID          string            `json:"_id,omitempty" bson:"_id,omitempty"`
@@ -9,7 +13,7 @@ type Notification struct {
 	Body        string            `json:"body" bson:"body"`
 	ImageURL    string            `json:"imageUrl,omitempty" bson:"imageUrl,omitempty"`
 	Data        map[string]string `json:"data,omitempty" bson:"data,omitempty"`
-	Type        string            `json:"type" bson:"type"` // "chat" | "activity" | "marketing"
+	Type        string            `json:"type" bson:"type"`     // "chat" | "activity" | "marketing"
 	Status      string            `json:"status" bson:"status"` // "pending" | "sent" | "failed"
 	ScheduledAt *time.Time        `json:"scheduledAt,omitempty" bson:"scheduledAt,omitempty"`
 	SentAt      *time.Time        `json:"sentAt,omitempty" bson:"sentAt,omitempty"`
@@ -40,19 +44,19 @@ type SegmentFilter struct {
 
 // AdminNotificationLog records an admin broadcast or segment send event
 type AdminNotificationLog struct {
-	ID            string            `json:"_id,omitempty" bson:"_id,omitempty"`
-	Title         string            `json:"title" bson:"title"`
-	Body          string            `json:"body" bson:"body"`
-	ImageURL      string            `json:"imageUrl,omitempty" bson:"imageUrl,omitempty"`
-	Type          string            `json:"type" bson:"type"`
-	Data          map[string]string `json:"data,omitempty" bson:"data,omitempty"`
-	SentTo        string            `json:"sentTo" bson:"sentTo"` // "all" | "segment"
-	SegmentFilter *SegmentFilter    `json:"segmentFilter,omitempty" bson:"segmentFilter,omitempty"`
-	ScheduledAt   *time.Time        `json:"scheduledAt,omitempty" bson:"scheduledAt,omitempty"`
-	SentAt        *time.Time        `json:"sentAt,omitempty" bson:"sentAt,omitempty"`
-	TotalSent     int               `json:"totalSent" bson:"totalSent"`
-	TotalFailed   int               `json:"totalFailed" bson:"totalFailed"`
-	CreatedBy     string            `json:"createdBy,omitempty" bson:"createdBy,omitempty"`
+	ID            primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+	Title         string             `json:"title" bson:"title"`
+	Body          string             `json:"body" bson:"body"`
+	ImageURL      string             `json:"imageUrl,omitempty" bson:"imageUrl,omitempty"`
+	Type          string             `json:"type" bson:"type"`
+	Data          map[string]string  `json:"data,omitempty" bson:"data,omitempty"`
+	SentTo        string             `json:"sentTo" bson:"sentTo"` // "all" | "segment"
+	SegmentFilter *SegmentFilter     `json:"segmentFilter,omitempty" bson:"segmentFilter,omitempty"`
+	ScheduledAt   *time.Time         `json:"scheduledAt,omitempty" bson:"scheduledAt,omitempty"`
+	SentAt        *time.Time         `json:"sentAt,omitempty" bson:"sentAt,omitempty"`
+	TotalSent     int                `json:"totalSent" bson:"totalSent"`
+	TotalFailed   int                `json:"totalFailed" bson:"totalFailed"`
+	CreatedBy     string             `json:"createdBy,omitempty" bson:"createdBy,omitempty"`
 }
 
 type NotificationPreference struct {
@@ -136,7 +140,7 @@ type UpdateNotificationTemplateDto struct {
 
 // QueryAdminLogDto provides pagination for admin logs
 type QueryAdminLogDto struct {
-	Page  int    `query:"page"`
-	Limit int    `query:"limit"`
+	Page   int    `query:"page"`
+	Limit  int    `query:"limit"`
 	SentTo string `query:"sentTo"`
 }
