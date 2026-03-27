@@ -86,6 +86,17 @@ func (r *rtblSingleResult) Decode(v interface{}) error {
 }
 func (r *rtblSingleResult) Err() error { return r.err }
 
+// rtblCaptureCollection overrides InsertOne to record the inserted document.
+type rtblCaptureCollection struct {
+	rtblMockCollection
+	inserted interface{}
+}
+
+func (c *rtblCaptureCollection) InsertOne(_ context.Context, doc interface{}, _ ...*options.InsertOneOptions) (*mongo.InsertOneResult, error) {
+	c.inserted = doc
+	return c.rtblMockCollection.insertOneResult, c.rtblMockCollection.insertOneErr
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -143,24 +154,26 @@ func TestRefreshTokenBlackList_Create_SetsID(t *testing.T) {
 
 func TestRefreshTokenBlackList_Create_SetsTimestamp(t *testing.T) {
 	before := time.Now().Add(-time.Millisecond)
-	col := &rtblMockCollection{
-		insertOneResult: &mongo.InsertOneResult{InsertedID: primitive.NewObjectID()},
+	cc := &rtblCaptureCollection{
+		rtblMockCollection: rtblMockCollection{
+			insertOneResult: &mongo.InsertOneResult{InsertedID: primitive.NewObjectID()},
+		},
 	}
-	svc := newRTBLSvc(col)
+	svc := newRTBLSvc(cc)
 
-	// capture CreatedAt via a custom collection that records the inserted doc
-	type captureCol struct {
-		rtblMockCollection
-		got model.RefreshTokenBlackList
+	_, err := svc.Create(model.RefreshTokenBlackList{Token: "tok"})
+	if err != nil {
+		t.Fatal(err)
 	}
-	cc := &captureCol{rtblMockCollection: rtblMockCollection{
-		insertOneResult: &mongo.InsertOneResult{InsertedID: primitive.NewObjectID()},
-	}}
-	// Use the regular mock — timestamp is set on the local copy before InsertOne is called
-	_ = col
-	_, _ = svc.Create(model.RefreshTokenBlackList{Token: "tok"})
-	_ = before
-	_ = cc
+
+	tok, ok := cc.inserted.(model.RefreshTokenBlackList)
+	if !ok {
+		t.Fatal("inserted document is not a RefreshTokenBlackList")
+	}
+	after := time.Now().Add(time.Millisecond)
+	if tok.CreatedAt.Before(before) || tok.CreatedAt.After(after) {
+		t.Errorf("expected CreatedAt between %v and %v, got %v", before, after, tok.CreatedAt)
+	}
 }
 
 func TestRefreshTokenBlackList_Create_InsertError(t *testing.T) {

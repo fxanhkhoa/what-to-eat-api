@@ -139,6 +139,9 @@ func (nc *NotificationController) SendBroadcast(c echo.Context) error {
 	if err := c.Bind(&dto); err != nil {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
+	if err := c.Validate(&dto); err != nil {
+		return c.String(http.StatusBadRequest, err.Error())
+	}
 	if err := nc.svc.SendBroadcast(dto, claim.ID); err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
@@ -154,6 +157,9 @@ func (nc *NotificationController) SendSegment(c echo.Context) error {
 	claim := c.Get("CLAIM").(*model.JwtCustomClaims)
 	var dto model.SendSegmentDto
 	if err := c.Bind(&dto); err != nil {
+		return c.String(http.StatusBadRequest, err.Error())
+	}
+	if err := c.Validate(&dto); err != nil {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
 	if err := nc.svc.SendToSegment(dto, claim.ID); err != nil {
