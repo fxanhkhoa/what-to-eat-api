@@ -3,8 +3,6 @@ package controller
 import (
 	"net/http"
 	"strconv"
-	"what-to-eat/be/config"
-	"what-to-eat/be/constants"
 	"what-to-eat/be/helper"
 	"what-to-eat/be/model"
 	"what-to-eat/be/service"
@@ -17,13 +15,7 @@ type NotificationController struct {
 }
 
 func NewNotificationController() *NotificationController {
-	dbName := config.GetDBInstance().GetDbName()
-	db := config.GetDBInstance().GetClient().Database(dbName)
-	svc := service.NewNotificationService(
-		service.NewMongoCollectionAdapter(db.Collection(constants.NOTIFICATION_COLLECTION)),
-		service.NewMongoCollectionAdapter(db.Collection(constants.NOTIFICATION_PREFERENCE_COLLECTION)),
-		service.NewMongoCollectionAdapter(db.Collection(constants.USER_COLLECTION)),
-	)
+	svc := service.NewNotificationServiceFromDB()
 	return &NotificationController{svc: svc}
 }
 
@@ -138,4 +130,126 @@ func (nc *NotificationController) Send(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
 	return c.JSON(http.StatusOK, map[string]string{"message": "notification sent"})
+}
+
+// SendBroadcast sends a notification to all users (or schedules it)
+func (nc *NotificationController) SendBroadcast(c echo.Context) error {
+	claim := c.Get("CLAIM").(*model.JwtCustomClaims)
+	var dto model.SendBroadcastDto
+	if err := c.Bind(&dto); err != nil {
+		return c.String(http.StatusBadRequest, err.Error())
+	}
+	if err := c.Validate(&dto); err != nil {
+		return c.String(http.StatusBadRequest, err.Error())
+	}
+	if err := nc.svc.SendBroadcast(dto, claim.ID); err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	msg := "broadcast sent"
+	if dto.ScheduledAt != nil {
+		msg = "broadcast scheduled"
+	}
+	return c.JSON(http.StatusOK, map[string]string{"message": msg})
+}
+
+// SendSegment sends a notification to a filtered user segment (or schedules it)
+func (nc *NotificationController) SendSegment(c echo.Context) error {
+	claim := c.Get("CLAIM").(*model.JwtCustomClaims)
+	var dto model.SendSegmentDto
+	if err := c.Bind(&dto); err != nil {
+		return c.String(http.StatusBadRequest, err.Error())
+	}
+	if err := c.Validate(&dto); err != nil {
+		return c.String(http.StatusBadRequest, err.Error())
+	}
+	if err := nc.svc.SendToSegment(dto, claim.ID); err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	msg := "segment notification sent"
+	if dto.ScheduledAt != nil {
+		msg = "segment notification scheduled"
+	}
+	return c.JSON(http.StatusOK, map[string]string{"message": msg})
+}
+
+// GetAdminLogs returns paginated admin broadcast / segment logs
+func (nc *NotificationController) GetAdminLogs(c echo.Context) error {
+	page, err := strconv.Atoi(c.QueryParam("page"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || limit < 1 {
+		limit = 20
+	}
+	sentTo := c.QueryParam("sentTo")
+	logs, total, err := nc.svc.GetAdminLogs(page, limit, sentTo)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, helper.PaginationObject{Data: logs, Count: total})
+}
+
+// CreateTemplate creates a new notification template
+func (nc *NotificationController) CreateTemplate(c echo.Context) error {
+	claim := c.Get("CLAIM").(*model.JwtCustomClaims)
+	var dto model.CreateNotificationTemplateDto
+	if err := c.Bind(&dto); err != nil {
+		return c.String(http.StatusBadRequest, err.Error())
+	}
+	tmpl, err := nc.svc.CreateTemplate(dto, claim.ID)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusCreated, tmpl)
+}
+
+// GetTemplates returns paginated notification templates
+func (nc *NotificationController) GetTemplates(c echo.Context) error {
+	page, err := strconv.Atoi(c.QueryParam("page"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil || limit < 1 {
+		limit = 50
+	}
+	templates, total, err := nc.svc.GetTemplates(page, limit)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, helper.PaginationObject{Data: templates, Count: total})
+}
+
+// GetTemplate returns a single notification template by ID
+func (nc *NotificationController) GetTemplate(c echo.Context) error {
+	id := c.Param("id")
+	tmpl, err := nc.svc.GetTemplateByID(id)
+	if err != nil {
+		return c.String(http.StatusNotFound, err.Error())
+	}
+	return c.JSON(http.StatusOK, tmpl)
+}
+
+// UpdateTemplate updates a notification template by ID
+func (nc *NotificationController) UpdateTemplate(c echo.Context) error {
+	id := c.Param("id")
+	var dto model.UpdateNotificationTemplateDto
+	if err := c.Bind(&dto); err != nil {
+		return c.String(http.StatusBadRequest, err.Error())
+	}
+	tmpl, err := nc.svc.UpdateTemplate(id, dto)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, tmpl)
+}
+
+// DeleteTemplate deletes a notification template by ID
+func (nc *NotificationController) DeleteTemplate(c echo.Context) error {
+	id := c.Param("id")
+	if err := nc.svc.DeleteTemplate(id); err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, map[string]string{"message": "template deleted"})
 }

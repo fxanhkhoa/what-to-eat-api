@@ -14,7 +14,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type FeedbackService struct{}
+type FeedbackService struct {
+	col CollectionInterface
+}
+
+// NewFeedbackService creates a FeedbackService with an injected collection (useful for testing).
+func NewFeedbackService(col CollectionInterface) *FeedbackService {
+	return &FeedbackService{col: col}
+}
 
 func (fs *FeedbackService) Collection() *mongo.Collection {
 	dbName := config.GetDBInstance().GetDbName()
@@ -22,8 +29,15 @@ func (fs *FeedbackService) Collection() *mongo.Collection {
 	return col
 }
 
+func (fs *FeedbackService) getCol() CollectionInterface {
+	if fs.col != nil {
+		return fs.col
+	}
+	return NewMongoCollectionAdapter(fs.Collection())
+}
+
 func (fs *FeedbackService) Create(createFeedbackInput model.CreateFeedbackDto, userId *primitive.ObjectID) (*model.Feedback, error) {
-	collection := fs.Collection()
+	collection := fs.getCol()
 
 	now := time.Now()
 
@@ -52,7 +66,7 @@ func (fs *FeedbackService) Create(createFeedbackInput model.CreateFeedbackDto, u
 }
 
 func (fs *FeedbackService) GetAll(feedbackListDto model.FeedbackListDto) (*model.PaginationResponse, error) {
-	collection := fs.Collection()
+	collection := fs.getCol()
 
 	filter := bson.M{}
 
@@ -117,7 +131,7 @@ func (fs *FeedbackService) GetAll(feedbackListDto model.FeedbackListDto) (*model
 }
 
 func (fs *FeedbackService) GetById(id string) (*model.Feedback, error) {
-	collection := fs.Collection()
+	collection := fs.getCol()
 
 	objectId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -137,7 +151,7 @@ func (fs *FeedbackService) GetById(id string) (*model.Feedback, error) {
 }
 
 func (fs *FeedbackService) Update(id string, updateFeedbackDto model.UpdateFeedbackDto, userId primitive.ObjectID) (*model.Feedback, error) {
-	collection := fs.Collection()
+	collection := fs.getCol()
 
 	objectId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -189,7 +203,7 @@ func (fs *FeedbackService) Update(id string, updateFeedbackDto model.UpdateFeedb
 }
 
 func (fs *FeedbackService) Delete(id string, userId primitive.ObjectID) error {
-	collection := fs.Collection()
+	collection := fs.getCol()
 
 	objectId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {

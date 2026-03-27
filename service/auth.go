@@ -22,7 +22,48 @@ import (
 	"google.golang.org/api/option"
 )
 
-type AuthService struct{}
+// userAuthProvider is the subset of UserService methods that AuthService needs.
+type userAuthProvider interface {
+	FindUserByAppleID(appleID string) (*model.User, error)
+	FindUserByUID(googleID string) (*model.User, error)
+	CreateUserWithAppleFromOAuth(userInfo *model.AppleUserInfo) (*model.User, error)
+	CreateUserWithGoogleFromOAuth(userInfo *oauth2.Userinfo) (*model.User, error)
+	FindByID(id string) (*model.User, error)
+}
+
+// blacklistProvider is the subset of RefreshTokenBlackListService methods that AuthService needs.
+type blacklistProvider interface {
+	Create(token model.RefreshTokenBlackList) (primitive.ObjectID, error)
+	GetByToken(token string) (*model.RefreshTokenBlackList, error)
+}
+
+// AuthService holds optional injected dependencies for testing.
+type AuthService struct {
+	userSvc      userAuthProvider
+	blacklistSvc blacklistProvider
+	appleJWKSURL string
+}
+
+func (a *AuthService) getUserSvc() userAuthProvider {
+	if a.userSvc != nil {
+		return a.userSvc
+	}
+	return NewUserService()
+}
+
+func (a *AuthService) getBlacklistSvc() blacklistProvider {
+	if a.blacklistSvc != nil {
+		return a.blacklistSvc
+	}
+	return NewRefreshTokenBlackListService(nil)
+}
+
+func (a *AuthService) getAppleJWKSURL() string {
+	if a.appleJWKSURL != "" {
+		return a.appleJWKSURL
+	}
+	return "https://appleid.apple.com/auth/keys"
+}
 
 // Login verifies Google ID token and authenticates the user
 func (a *AuthService) Login(loginDto model.LoginDto, c echo.Context) (*model.TokenResult, error) {
@@ -38,7 +79,7 @@ func (a *AuthService) Login(loginDto model.LoginDto, c echo.Context) (*model.Tok
 			return nil, err
 		}
 
-		user, err = NewUserService().FindUserByAppleID(userInfo.Sub)
+		user, err = a.getUserSvc().FindUserByAppleID(userInfo.Sub)
 		if err != nil && err != mongo.ErrNoDocuments {
 			log.Println(err.Error())
 			return nil, err
@@ -46,7 +87,7 @@ func (a *AuthService) Login(loginDto model.LoginDto, c echo.Context) (*model.Tok
 
 		if user == nil {
 			// Create user with Apple info
-			user, err = NewUserService().CreateUserWithAppleFromOAuth(userInfo)
+			user, err = a.getUserSvc().CreateUserWithAppleFromOAuth(userInfo)
 			if err != nil {
 				log.Println(err.Error())
 				return nil, err
@@ -59,7 +100,7 @@ func (a *AuthService) Login(loginDto model.LoginDto, c echo.Context) (*model.Tok
 			return nil, err
 		}
 
-		user, err = NewUserService().FindUserByUID(userInfo.Id)
+		user, err = a.getUserSvc().FindUserByUID(userInfo.Id)
 		if err != nil && err != mongo.ErrNoDocuments {
 			log.Println(err.Error())
 			return nil, err
@@ -67,7 +108,7 @@ func (a *AuthService) Login(loginDto model.LoginDto, c echo.Context) (*model.Tok
 
 		if user == nil {
 			// Create user with Google info
-			user, err = NewUserService().CreateUserWithGoogleFromOAuth(userInfo)
+			user, err = a.getUserSvc().CreateUserWithGoogleFromOAuth(userInfo)
 			if err != nil {
 				log.Println(err.Error())
 				return nil, err
@@ -122,7 +163,7 @@ func (a *AuthService) Logout(refreshToken string, profile *model.JwtCustomClaims
 		userID := claims.ID
 		userObjectID, err := primitive.ObjectIDFromHex(userID)
 		// Add the refresh token to the blacklist
-		service := NewRefreshTokenBlackListService()
+		service := a.getBlacklistSvc()
 		_, err = service.Create(model.RefreshTokenBlackList{
 			Token:     refreshToken,
 			UserID:    userObjectID,
@@ -275,7 +316,7 @@ func (a *AuthService) verifyAppleIdToken(idToken string) (*model.AppleUserInfo, 
 }
 
 func (a *AuthService) getAppleJWKS() (*model.AppleJWKS, error) {
-	resp, err := http.Get("https://appleid.apple.com/auth/keys")
+	resp, err := http.Get(a.getAppleJWKSURL())
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +386,7 @@ func (a *AuthService) GenerateRefreshToken(user model.User) (string, error) {
 
 func (a *AuthService) GenerateToken(refreshToken string) (string, error) {
 
-	refreshTokenBlackListService := NewRefreshTokenBlackListService()
+	refreshTokenBlackListService := a.getBlacklistSvc()
 	blackList, _ := refreshTokenBlackListService.GetByToken(refreshToken)
 
 	if blackList != nil {
@@ -367,7 +408,7 @@ func (a *AuthService) GenerateToken(refreshToken string) (string, error) {
 		log.Println("Failed to parse refresh token:", err)
 		return "", err
 	} else if claims, ok := token.Claims.(*model.JwtCustomClaims); ok {
-		user, err := NewUserService().FindByID(claims.ID)
+		user, err := a.getUserSvc().FindByID(claims.ID)
 
 		if err != nil {
 			log.Println(err.Error())

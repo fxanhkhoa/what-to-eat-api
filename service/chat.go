@@ -14,7 +14,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type ChatService struct{}
+type ChatService struct {
+	msgCol  CollectionInterface
+	roomCol CollectionInterface
+}
+
+// NewChatService creates a ChatService with injected collections (useful for testing).
+func NewChatService(msgCol, roomCol CollectionInterface) *ChatService {
+	return &ChatService{msgCol: msgCol, roomCol: roomCol}
+}
 
 func (cs *ChatService) Collection() *mongo.Collection {
 	dbName := config.GetDBInstance().GetDbName()
@@ -28,9 +36,23 @@ func (cs *ChatService) RoomCollection() *mongo.Collection {
 	return col
 }
 
+func (cs *ChatService) getMsgCol() CollectionInterface {
+	if cs.msgCol != nil {
+		return cs.msgCol
+	}
+	return NewMongoCollectionAdapter(cs.Collection())
+}
+
+func (cs *ChatService) getRoomCol() CollectionInterface {
+	if cs.roomCol != nil {
+		return cs.roomCol
+	}
+	return NewMongoCollectionAdapter(cs.RoomCollection())
+}
+
 // Create a new chat message
 func (cs *ChatService) CreateMessage(createMessageInput model.CreateChatMessageDto) (*model.ChatMessage, error) {
-	collection := cs.Collection()
+	collection := cs.getMsgCol()
 	now := time.Now()
 	timestamp := float64(now.Unix())
 
@@ -63,7 +85,7 @@ func (cs *ChatService) CreateMessage(createMessageInput model.CreateChatMessageD
 
 // Get message history for a room with pagination
 func (cs *ChatService) GetMessageHistory(roomID string, limit int, before float64) ([]*model.ChatMessage, error) {
-	collection := cs.Collection()
+	collection := cs.getMsgCol()
 
 	filter := bson.M{
 		"roomId":  roomID,
@@ -99,7 +121,7 @@ func (cs *ChatService) GetMessageHistory(roomID string, limit int, before float6
 
 // Update message reactions
 func (cs *ChatService) UpdateMessageReactions(messageID string, reactions map[string]int) (*model.ChatMessage, error) {
-	collection := cs.Collection()
+	collection := cs.getMsgCol()
 
 	objectID, err := primitive.ObjectIDFromHex(messageID)
 	if err != nil {
@@ -126,7 +148,7 @@ func (cs *ChatService) UpdateMessageReactions(messageID string, reactions map[st
 
 // Find a message by ID
 func (cs *ChatService) FindMessageByID(messageID string) (*model.ChatMessage, error) {
-	collection := cs.Collection()
+	collection := cs.getMsgCol()
 
 	objectID, err := primitive.ObjectIDFromHex(messageID)
 	if err != nil {
@@ -147,7 +169,7 @@ func (cs *ChatService) FindMessageByID(messageID string) (*model.ChatMessage, er
 
 // Create or get a chat room
 func (cs *ChatService) CreateOrGetRoom(roomID, roomType string) (*model.ChatRoom, error) {
-	collection := cs.RoomCollection()
+	collection := cs.getRoomCol()
 	now := time.Now()
 
 	roomName := roomType + roomID
@@ -184,7 +206,7 @@ func (cs *ChatService) CreateOrGetRoom(roomID, roomType string) (*model.ChatRoom
 
 // Add user to room
 func (cs *ChatService) AddUserToRoom(roomName, userID string) error {
-	collection := cs.RoomCollection()
+	collection := cs.getRoomCol()
 
 	filter := bson.M{"name": roomName, "deleted": false}
 	update := bson.M{
@@ -203,7 +225,7 @@ func (cs *ChatService) AddUserToRoom(roomName, userID string) error {
 
 // Remove user from room
 func (cs *ChatService) RemoveUserFromRoom(roomName, userID string) error {
-	collection := cs.RoomCollection()
+	collection := cs.getRoomCol()
 
 	filter := bson.M{"name": roomName, "deleted": false}
 	update := bson.M{
@@ -222,7 +244,7 @@ func (cs *ChatService) RemoveUserFromRoom(roomName, userID string) error {
 
 // Update typing users
 func (cs *ChatService) UpdateTypingUsers(roomName, userID string, isTyping bool) error {
-	collection := cs.RoomCollection()
+	collection := cs.getRoomCol()
 
 	filter := bson.M{"name": roomName, "deleted": false}
 	var update bson.M
@@ -245,7 +267,7 @@ func (cs *ChatService) UpdateTypingUsers(roomName, userID string, isTyping bool)
 
 // Get online users for a room
 func (cs *ChatService) GetOnlineUsers(roomName string) ([]string, error) {
-	collection := cs.RoomCollection()
+	collection := cs.getRoomCol()
 
 	filter := bson.M{"name": roomName, "deleted": false}
 	var room model.ChatRoom
@@ -259,7 +281,7 @@ func (cs *ChatService) GetOnlineUsers(roomName string) ([]string, error) {
 
 // Get typing users for a room
 func (cs *ChatService) GetTypingUsers(roomName string) ([]string, error) {
-	collection := cs.RoomCollection()
+	collection := cs.getRoomCol()
 
 	filter := bson.M{"name": roomName, "deleted": false}
 	var room model.ChatRoom

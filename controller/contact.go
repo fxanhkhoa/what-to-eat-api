@@ -12,14 +12,28 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// contactServiceProvider is the subset of ContactService used by ContactController.
+type contactServiceProvider interface {
+	Find(query model.QueryContactDto) ([]*model.Contact, int64, error)
+	FindOne(id string) (*model.Contact, error)
+	Create(dto model.CreateContactDto) (*model.Contact, error)
+	Update(dto model.UpdateContactDto, profile *model.JwtCustomClaims) (*model.Contact, error)
+	Remove(id string, profile *model.JwtCustomClaims) (*model.Contact, error)
+}
+
 type ContactController struct {
-	svc *service.ContactService
+	svc contactServiceProvider
 }
 
 func NewContactController() *ContactController {
 	dbName := config.GetDBInstance().GetDbName()
 	col := config.GetDBInstance().GetClient().Database(dbName).Collection(constants.CONTACT_COLLECTION)
 	svc := service.NewContactService(service.NewMongoCollectionAdapter(col))
+	return &ContactController{svc: svc}
+}
+
+// NewContactControllerWithService creates a ContactController with an injected service, for testing.
+func NewContactControllerWithService(svc contactServiceProvider) *ContactController {
 	return &ContactController{svc: svc}
 }
 

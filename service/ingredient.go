@@ -16,7 +16,20 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type IngredientService struct{}
+type IngredientService struct {
+	col CollectionInterface
+}
+
+func NewIngredientService(col CollectionInterface) *IngredientService {
+	return &IngredientService{col: col}
+}
+
+func (is *IngredientService) getCol() CollectionInterface {
+	if is.col != nil {
+		return is.col
+	}
+	return NewMongoCollectionAdapter(is.Collection())
+}
 
 func (is *IngredientService) Collection() *mongo.Collection {
 	dbName := config.GetDBInstance().GetDbName()
@@ -25,7 +38,7 @@ func (is *IngredientService) Collection() *mongo.Collection {
 }
 
 func (is *IngredientService) Create(createIngredientInput model.CreateIngredientDto, profile *model.JwtCustomClaims) (*model.Ingredient, error) {
-	collection := is.Collection()
+	collection := is.getCol()
 
 	now := time.Now()
 
@@ -59,7 +72,7 @@ func (is *IngredientService) Create(createIngredientInput model.CreateIngredient
 }
 
 func (is *IngredientService) Update(updateIngredientInput model.UpdateIngredientDto, profile *model.JwtCustomClaims) (*model.Ingredient, error) {
-	collection := is.Collection()
+	collection := is.getCol()
 	now := time.Now()
 	var ingredient model.Ingredient
 
@@ -95,7 +108,7 @@ func (is *IngredientService) Update(updateIngredientInput model.UpdateIngredient
 }
 
 func (is *IngredientService) Remove(id string, profile *model.JwtCustomClaims) (*model.Ingredient, error) {
-	collection := is.Collection()
+	collection := is.getCol()
 	now := time.Now()
 
 	objectID, err := primitive.ObjectIDFromHex(id)
@@ -119,7 +132,7 @@ func (is *IngredientService) Remove(id string, profile *model.JwtCustomClaims) (
 }
 
 func (is *IngredientService) Find(query model.QueryIngredientDto) ([]*model.Ingredient, int64, error) {
-	collection := is.Collection()
+	collection := is.getCol()
 	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip((int64(query.Page) - 1) * int64(query.Limit)).SetLimit(int64(query.Limit))
 	filter := bson.D{{Key: "deleted", Value: false}}
 	if query.Keyword != nil && *query.Keyword != "" {
@@ -148,7 +161,7 @@ func (is *IngredientService) Find(query model.QueryIngredientDto) ([]*model.Ingr
 }
 
 func (is *IngredientService) FindOne(id string) (*model.Ingredient, error) {
-	collection := is.Collection()
+	collection := is.getCol()
 
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -166,7 +179,7 @@ func (is *IngredientService) FindOne(id string) (*model.Ingredient, error) {
 }
 
 func (is *IngredientService) FindOneBySlug(slug string) (*model.Ingredient, error) {
-	collection := is.Collection()
+	collection := is.getCol()
 	filter := bson.M{"slug": slug}
 	result := collection.FindOne(context.TODO(), filter)
 	if result.Err() != nil {
@@ -178,7 +191,7 @@ func (is *IngredientService) FindOneBySlug(slug string) (*model.Ingredient, erro
 }
 
 func (is *IngredientService) FindTitleByLang(title string, lang string) (*model.Ingredient, error) {
-	collection := is.Collection()
+	collection := is.getCol()
 	titleFilter := fmt.Sprintf("title.%s", lang)
 	filter := bson.M{titleFilter: title}
 	result := collection.FindOne(context.TODO(), filter)
@@ -194,7 +207,7 @@ func (is *IngredientService) FindTitleByLang(title string, lang string) (*model.
 }
 
 func (is *IngredientService) Random(limit *int, ingredientCategory *[]string) ([]*model.Ingredient, error) {
-	collection := is.Collection()
+	collection := is.getCol()
 	stages := []bson.D{}
 	stages = append(stages, bson.D{{Key: "$match", Value: bson.D{{Key: "deleted", Value: false}}}})
 	if ingredientCategory != nil && len(*ingredientCategory) > 0 {

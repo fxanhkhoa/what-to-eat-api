@@ -101,6 +101,14 @@ func (m *mockCollection) UpdateMany(ctx context.Context, filter interface{}, upd
 	return nil, nil
 }
 
+func (m *mockCollection) DeleteOne(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
+	return &mongo.DeleteResult{DeletedCount: 1}, nil
+}
+
+func (m *mockCollection) Aggregate(ctx context.Context, pipeline interface{}, opts ...*options.AggregateOptions) (Cursor, error) {
+	return emptyCursor(), nil
+}
+
 // ---------------------------------------------------------------------------
 // Create tests
 // ---------------------------------------------------------------------------
