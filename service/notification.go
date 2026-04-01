@@ -676,6 +676,10 @@ func (ns *NotificationService) dispatchPending() {
 			return
 		}
 		if err != nil {
+			if isTransientMongoError(err) {
+				fmt.Printf("[Scheduler] transient claim pending error: %v\n", err)
+				return
+			}
 			fmt.Printf("[Scheduler] claim pending error: %v\n", err)
 			return
 		}
@@ -739,11 +743,28 @@ func (ns *NotificationService) claimNextPendingLog() (*model.AdminNotificationLo
 		SetSort(bson.D{{Key: "scheduledAt", Value: 1}, {Key: "_id", Value: 1}}).
 		SetReturnDocument(options.After)
 
-	var log model.AdminNotificationLog
-	if err := ns.getAdminLogCol().FindOneAndUpdate(context.TODO(), filter, update, opt).Decode(&log); err != nil {
-		return nil, err
+	for attempt := 1; attempt <= 2; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		var log model.AdminNotificationLog
+		err := ns.getAdminLogCol().FindOneAndUpdate(ctx, filter, update, opt).Decode(&log)
+		cancel()
+		if err == nil {
+			return &log, nil
+		}
+		if err == mongo.ErrNoDocuments {
+			return nil, err
+		}
+		if !isTransientMongoError(err) || attempt == 2 {
+			return nil, err
+		}
+		time.Sleep(200 * time.Millisecond)
 	}
-	return &log, nil
+
+	return nil, mongo.ErrNoDocuments
+}
+
+func isTransientMongoError(err error) bool {
+	return mongo.IsNetworkError(err) || mongo.IsTimeout(err)
 }
 
 // GetAdminLogs returns paginated admin notification logs
