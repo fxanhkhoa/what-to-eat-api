@@ -41,11 +41,20 @@ func (dvs *DishVoteService) Create(createDishVoteInput model.CreateDishVoteDto, 
 	collection := dvs.getCol()
 
 	now := time.Now()
+	description := ""
+	if createDishVoteInput.Description != nil {
+		description = *createDishVoteInput.Description
+	}
+	dishVoteItems := createDishVoteInput.DishVoteItems
+	if dishVoteItems == nil {
+		dishVoteItems = []*model.DishVoteItem{}
+	}
+	title := createDishVoteInput.Title
 
 	dishVote := model.DishVote{
-		Title:         createDishVoteInput.Title,
-		Description:   createDishVoteInput.Description,
-		DishVoteItems: createDishVoteInput.DishVoteItems,
+		Title:         &title,
+		Description:   &description,
+		DishVoteItems: dishVoteItems,
 		Deleted:       false,
 		UpdatedAt:     &now,
 		UpdatedBy:     &profile.ID,
@@ -77,12 +86,22 @@ func (dvs *DishVoteService) Update(updateDishVoteInput model.UpdateDishVoteDto, 
 		updatedBy = profile.ID
 	}
 
+	description := ""
+	if updateDishVoteInput.Description != nil {
+		description = *updateDishVoteInput.Description
+	}
+	dishVoteItems := updateDishVoteInput.DishVoteItems
+	if dishVoteItems == nil {
+		dishVoteItems = []*model.DishVoteItem{}
+	}
+	title := updateDishVoteInput.Title
+
 	filter := bson.M{"_id": objectID, "deleted": false}
 	options := options.FindOneAndUpdate().SetReturnDocument(options.After).SetUpsert(true)
 	result := collection.FindOneAndUpdate(context.TODO(), filter, bson.M{"$set": bson.D{
-		{Key: "title", Value: updateDishVoteInput.Title},
-		{Key: "description", Value: updateDishVoteInput.Description},
-		{Key: "dishVoteItems", Value: updateDishVoteInput.DishVoteItems},
+		{Key: "title", Value: &title},
+		{Key: "description", Value: &description},
+		{Key: "dishVoteItems", Value: dishVoteItems},
 		{Key: "updatedAt", Value: now},
 		{Key: "updatedBy", Value: updatedBy},
 	}}, options)

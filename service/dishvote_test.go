@@ -120,7 +120,7 @@ func strPtr(s string) *string { return &s }
 
 func sampleCreateDto() model.CreateDishVoteDto {
 	return model.CreateDishVoteDto{
-		Title:       strPtr("Lunch vote"),
+		Title:       "Lunch vote",
 		Description: strPtr("Pick your lunch"),
 		DishVoteItems: []*model.DishVoteItem{
 			{Slug: "pho", VoteUser: []*string{}, VoteAnonymous: []*string{}},
@@ -242,7 +242,7 @@ func TestDishVoteService_Update_Success(t *testing.T) {
 
 	dto := model.UpdateDishVoteDto{
 		ID:    expected.ID,
-		Title: strPtr("Updated title"),
+		Title: "Updated title",
 	}
 	vote, err := svc.Update(dto, sampleProfile())
 	if err != nil {
@@ -271,7 +271,7 @@ func TestDishVoteService_Update_FindOneAndUpdateError(t *testing.T) {
 	}
 	svc := NewDishVoteService(col)
 
-	dto := model.UpdateDishVoteDto{ID: oid.Hex(), Title: strPtr("x")}
+	dto := model.UpdateDishVoteDto{ID: oid.Hex(), Title: "x"}
 	_, err := svc.Update(dto, sampleProfile())
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -285,7 +285,7 @@ func TestDishVoteService_Update_NilProfile(t *testing.T) {
 	}
 	svc := NewDishVoteService(col)
 
-	dto := model.UpdateDishVoteDto{ID: expected.ID, Title: strPtr("no profile")}
+	dto := model.UpdateDishVoteDto{ID: expected.ID, Title: "no profile"}
 	// Should not panic with nil profile (updatedBy defaults to "")
 	vote, err := svc.Update(dto, nil)
 	if err != nil {
