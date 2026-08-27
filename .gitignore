@@ -21,3 +21,4 @@
 go.work
 .env
 firebase-credential.json
+.DS_Store

@@ -40,17 +40,13 @@ COPY --from=builder /build/app /app
 # Use non-root user
 USER appuser
 
-# Expose port (adjust as needed)
-EXPOSE 8080
+# Expose application port
+EXPOSE 5099
 
 # Add metadata
 LABEL maintainer="fxanhkhoa@gmail.com"
 LABEL description="What To Eat - Backend Service"
 LABEL version="1.0"
-
-# Health check (optional - adjust endpoint as needed)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["/app", "health"] || exit 1
 
 # Run the binary
 ENTRYPOINT ["/app"]
