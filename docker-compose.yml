@@ -9,7 +9,7 @@ services:
       - traefik-public
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.what-to-eat-api.rule=Host(`eatwhat.io.vn`)"
+      - "traefik.http.routers.what-to-eat-api.rule=Host(`api.eatwhat.io.vn`)"
       - "traefik.http.routers.what-to-eat-api.entrypoints=websecure"
       - "traefik.http.routers.what-to-eat-api.tls=true"
       - "traefik.http.services.what-to-eat-api.loadbalancer.server.port=5099"
@@ -17,4 +17,3 @@ services:
 networks:
   traefik-public:
     external: true
-
