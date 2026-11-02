@@ -11,9 +11,9 @@ on:
         required: false
         default: '5'
       categories:
-        description: 'Comma-separated categories (e.g. mon-chien,mon-xao,mon-kho)'
+        description: 'Comma-separated categories/keywords'
         required: false
-        default: 'mon-chien,mon-xao,mon-kho,mon-canh,mon-nuong,mon-hap'
+        default: 'món chiên giòn ngon,món xào đưa cơm,món kho đậm đà,món canh thanh mát,món nướng thơm lừng,món hấp thanh đạm'
 
 jobs:
   crawl-and-ingest:
@@ -43,7 +43,7 @@ jobs:
           DATABASE_NAME: ${{ secrets.DATABASE_NAME || 'what-to-eat' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           DAILY_CRAWL_LIMIT: ${{ github.event.inputs.crawl_limit || '5' }}
-          CRAWL_CATEGORIES: ${{ github.event.inputs.categories || 'mon-chien,mon-xao,mon-kho,mon-canh,mon-nuong,mon-hap' }}
+          CRAWL_CATEGORIES: ${{ github.event.inputs.categories || 'món chiên giòn ngon,món xào đưa cơm,món kho đậm đà,món canh thanh mát,món nướng thơm lừng,món hấp thanh đạm' }}
         run: |
           python scripts/crawler/auto_crawl_ingest.py
 
