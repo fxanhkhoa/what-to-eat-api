@@ -61,6 +61,7 @@ func (ds *DishService) Create(createDishInput model.CreateDishDto, profile *mode
 		Ingredients:          createDishInput.Ingredients,
 		RelatedDishes:        createDishInput.RelatedDishes,
 		Labels:               createDishInput.Labels,
+		SourceUrl:            createDishInput.SourceUrl,
 		Deleted:              false,
 		UpdatedAt:            &now,
 		UpdatedBy:            &profile.ID,
@@ -108,6 +109,7 @@ func (ds *DishService) Update(updateDishInput model.UpdateDishDto, profile *mode
 		{Key: "ingredients", Value: updateDishInput.Ingredients},
 		{Key: "relatedDishes", Value: updateDishInput.RelatedDishes},
 		{Key: "labels", Value: updateDishInput.Labels},
+		{Key: "sourceUrl", Value: updateDishInput.SourceUrl},
 		{Key: "updatedAt", Value: now},
 		{Key: "updatedBy", Value: profile.ID},
 	}}, options)

@@ -50,6 +50,7 @@ type Dish struct {
 	Ingredients          []*IngredientsInDish `json:"ingredients" bson:"ingredients"`
 	RelatedDishes        []*string            `json:"relatedDishes" bson:"relatedDishes"`
 	Labels               []*string            `json:"labels" bson:"labels"`
+	SourceUrl            *string              `json:"sourceUrl,omitempty" bson:"sourceUrl,omitempty"`
 	Deleted              bool                 `json:"deleted" bson:"deleted"`
 	DeletedAt            *time.Time           `json:"deletedAt,omitempty" bson:"deletedAt"`
 	DeletedBy            *string              `json:"deletedBy,omitempty" bson:"deletedBy"`
@@ -76,6 +77,7 @@ type CreateDishDto struct {
 	Ingredients          []*IngredientsInDish `json:"ingredients" bson:"ingredients"`
 	RelatedDishes        []*string            `json:"relatedDishes" bson:"relatedDishes"`
 	Labels               []*string            `json:"labels" bson:"labels"`
+	SourceUrl            *string              `json:"sourceUrl,omitempty" bson:"sourceUrl,omitempty"`
 }
 
 type UpdateDishDto struct {
@@ -95,4 +97,5 @@ type UpdateDishDto struct {
 	Ingredients          []*IngredientsInDish `json:"ingredients" bson:"ingredients"`
 	RelatedDishes        []*string            `json:"relatedDishes" bson:"relatedDishes"`
 	Labels               []*string            `json:"labels" bson:"labels"`
+	SourceUrl            *string              `json:"sourceUrl,omitempty" bson:"sourceUrl,omitempty"`
 }
