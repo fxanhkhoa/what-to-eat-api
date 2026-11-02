@@ -18,4 +18,5 @@ func UseUserGroup(group *echo.Group) {
 	group.GET("/", controller.FindAll, rG.RoleGuard([]string{constants.FIND_ALL_USER}))
 	group.PATCH("/:id/", controller.Update, rG.RoleGuard([]string{constants.UPDATE_USER}))
 	group.DELETE("/:id/", controller.Delete, rG.RoleGuard([]string{constants.REMOVE_USER}))
+	group.DELETE("/:id/data", controller.DeleteUserData, rG.RoleGuard([]string{constants.DELETE_USER_DATA}))
 }

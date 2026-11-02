@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"what-to-eat/be/helper"
 	"what-to-eat/be/model"
 	"what-to-eat/be/service"
@@ -64,6 +65,12 @@ func (dvc *DishVoteController) Create(c echo.Context) error {
 		return err
 	}
 
+	if strings.TrimSpace(dto.Title) == "" {
+		err := echo.NewHTTPError(http.StatusBadRequest, "title is required")
+		c.String(http.StatusBadRequest, "title is required")
+		return err
+	}
+
 	s := &service.DishVoteService{}
 	claim := c.Get("CLAIM").(*model.JwtCustomClaims)
 	result, err := s.Create(dto, claim)
@@ -82,6 +89,12 @@ func (dvc *DishVoteController) Update(c echo.Context) error {
 
 	if err := c.Bind(&dto); err != nil {
 		c.String(http.StatusBadRequest, err.Error())
+		return err
+	}
+
+	if strings.TrimSpace(dto.Title) == "" {
+		err := echo.NewHTTPError(http.StatusBadRequest, "title is required")
+		c.String(http.StatusBadRequest, "title is required")
 		return err
 	}
 

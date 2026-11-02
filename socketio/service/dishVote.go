@@ -2,7 +2,6 @@ package socketio_service
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"what-to-eat/be/model"
 	"what-to-eat/be/service"
@@ -35,12 +34,19 @@ func ProcessDishVoteUpdate(data ...any) (*model.DishVote, model.SocketioJoinRoom
 		log.Printf("Error finding DishVote with RoomID %s: %v", socketioJoinRoomData.RoomID, err)
 	}
 
-	fmt.Println(dishVote)
+	title := ""
+	if dishVote.Title != nil {
+		title = *dishVote.Title
+	}
+	description := ""
+	if dishVote.Description != nil {
+		description = *dishVote.Description
+	}
 
 	updateDishVote := model.UpdateDishVoteDto{
 		ID:            dishVote.ID,
-		Title:         dishVote.Title,
-		Description:   dishVote.Description,
+		Title:         title,
+		Description:   &description,
 		DishVoteItems: []*model.DishVoteItem{},
 	}
 

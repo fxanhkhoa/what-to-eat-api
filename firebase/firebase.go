@@ -4,16 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
+	"firebase.google.com/go/v4/messaging"
 	"google.golang.org/api/option"
 )
 
 var FirebaseApp *firebase.App
 var FirebaseClient *auth.Client
+var FirebaseMessagingClient *messaging.Client
 
 type FirebaseCredential struct {
 	Type                    string `json:"type"`
@@ -59,4 +62,12 @@ func InitFirebase() {
 		fmt.Printf("error initializing app: %v \n", err)
 	}
 	FirebaseClient = client
+
+	msgClient, err := FirebaseApp.Messaging(context.Background())
+	if err != nil {
+		fmt.Printf("error initializing messaging client: %v \n", err)
+	}
+	FirebaseMessagingClient = msgClient
+
+	log.Println("Firebase: initialized successfully (app, auth, messaging)")
 }

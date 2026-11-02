@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
@@ -45,7 +46,14 @@ func (d *MongoDB) InitializeMongoDB() {
 	uri := os.Getenv("MONGODB_CONNECTION_STRING")
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 
-	opts := options.Client().ApplyURI(uri).SetServerAPIOptions(serverAPI)
+	opts := options.Client().
+		ApplyURI(uri).
+		SetServerAPIOptions(serverAPI).
+		SetRetryWrites(true).
+		SetConnectTimeout(10 * time.Second).
+		SetServerSelectionTimeout(10 * time.Second).
+		SetSocketTimeout(20 * time.Second).
+		SetMaxConnIdleTime(30 * time.Second)
 	// Create a new client and connect to the server
 	client, err := mongo.Connect(context.TODO(), opts)
 	if err != nil {

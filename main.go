@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"what-to-eat/be/config"
 	"what-to-eat/be/firebase"
 	"what-to-eat/be/router"
+	"what-to-eat/be/service"
 	"what-to-eat/be/socketio"
 
 	"github.com/go-playground/validator/v10"
@@ -62,6 +64,10 @@ func main() {
 
 	router.InitializeRoutes(e)
 	socketio.InitializeSocketIO(e)
+
+	// Start background scheduler for scheduled notifications
+	notifSvc := service.NewNotificationServiceFromDB()
+	go notifSvc.StartScheduler(context.Background())
 
 	e.Logger.Fatal(e.Start(":" + port))
 }

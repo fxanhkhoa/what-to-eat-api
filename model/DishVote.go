@@ -30,14 +30,14 @@ type DishVote struct {
 }
 
 type CreateDishVoteDto struct {
-	Title         *string         `json:"title,omitempty" bson:"title"`
-	Description   *string         `json:"description,omitempty" bson:"description"`
+	Title         string          `json:"title" bson:"title"`
+	Description   *string         `json:"description" bson:"description"`
 	DishVoteItems []*DishVoteItem `json:"dishVoteItems" bson:"dishVoteItems"`
 }
 
 type UpdateDishVoteDto struct {
 	ID            string          `json:"_id" bson:"_id,omitempty"`
-	Title         *string         `json:"title,omitempty" bson:"title"`
-	Description   *string         `json:"description,omitempty" bson:"description"`
+	Title         string          `json:"title" bson:"title"`
+	Description   *string         `json:"description" bson:"description"`
 	DishVoteItems []*DishVoteItem `json:"dishVoteItems" bson:"dishVoteItems"`
 }

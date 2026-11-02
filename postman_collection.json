@@ -1535,6 +1535,939 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "User Favorites",
+			"item": [
+				{
+					"name": "Add Favorite",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"dishId\": \"DISH_ID\",\n  \"dishSlug\": \"dish-slug\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-favorite/",
+							"host": ["{{base_url}}"],
+							"path": ["user-favorite", ""]
+						},
+						"description": "Add dish to favorites (requires MANAGE_USER_FAVORITES permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Favorites",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-favorite/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["user-favorite", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "dishSlug",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get user's favorite dishes (requires MANAGE_USER_FAVORITES permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Favorite",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-favorite/:dishSlug/",
+							"host": ["{{base_url}}"],
+							"path": ["user-favorite", ":dishSlug", ""],
+							"variable": [
+								{
+									"key": "dishSlug",
+									"value": "dish-slug"
+								}
+							]
+						},
+						"description": "Remove dish from favorites (requires MANAGE_USER_FAVORITES permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Check Is Favorite",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-favorite/:dishSlug/check/",
+							"host": ["{{base_url}}"],
+							"path": ["user-favorite", ":dishSlug", "check", ""],
+							"variable": [
+								{
+									"key": "dishSlug",
+									"value": "dish-slug"
+								}
+							]
+						},
+						"description": "Check if dish is in favorites (requires MANAGE_USER_FAVORITES permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Saved Dishes",
+			"item": [
+				{
+					"name": "Save Dish",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"dishId\": \"DISH_ID\",\n  \"dishSlug\": \"dish-slug\",\n  \"notes\": \"My personal notes\",\n  \"tags\": [\"dinner\", \"weekend\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-saved-dish/",
+							"host": ["{{base_url}}"],
+							"path": ["user-saved-dish", ""]
+						},
+						"description": "Save dish with notes (requires MANAGE_USER_SAVED_DISHES permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Saved Dishes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-saved-dish/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["user-saved-dish", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "dishSlug",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "tags",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get user's saved dishes (requires MANAGE_USER_SAVED_DISHES permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Saved Dish",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"dishSlug\": \"dish-slug\",\n  \"notes\": \"Updated notes\",\n  \"tags\": [\"dinner\", \"quick\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-saved-dish/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["user-saved-dish", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "SAVED_DISH_ID"
+								}
+							]
+						},
+						"description": "Update saved dish notes and tags (requires MANAGE_USER_SAVED_DISHES permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Saved Dish",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-saved-dish/:dishSlug/",
+							"host": ["{{base_url}}"],
+							"path": ["user-saved-dish", ":dishSlug", ""],
+							"variable": [
+								{
+									"key": "dishSlug",
+									"value": "dish-slug"
+								}
+							]
+						},
+						"description": "Remove saved dish (requires MANAGE_USER_SAVED_DISHES permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Check Is Saved",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-saved-dish/:dishSlug/check/",
+							"host": ["{{base_url}}"],
+							"path": ["user-saved-dish", ":dishSlug", "check", ""],
+							"variable": [
+								{
+									"key": "dishSlug",
+									"value": "dish-slug"
+								}
+							]
+						},
+						"description": "Check if dish is saved (requires MANAGE_USER_SAVED_DISHES permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Dietary Preferences",
+			"item": [
+				{
+					"name": "Create or Update Preferences",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"dietaryRestrictions\": [\"vegetarian\", \"gluten-free\"],\n  \"allergies\": [\"peanuts\", \"shellfish\"],\n  \"dislikedIngredients\": [\"cilantro\"],\n  \"preferredCuisines\": [\"italian\", \"japanese\"],\n  \"preferredLabels\": [\"low-calorie\", \"high-protein\"],\n  \"spiceLevel\": \"medium\",\n  \"difficultLevel\": [\"easy\", \"medium\"],\n  \"maxCookingTime\": 45,\n  \"maxPreparationTime\": 30\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-dietary-preference/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dietary-preference", ""]
+						},
+						"description": "Create or update dietary preferences (requires MANAGE_USER_DIETARY_PREFERENCES permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Dietary Preferences",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-dietary-preference/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dietary-preference", ""]
+						},
+						"description": "Get user's dietary preferences (requires MANAGE_USER_DIETARY_PREFERENCES permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Dietary Preferences",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"spiceLevel\": \"hot\",\n  \"maxCookingTime\": 60\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-dietary-preference/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dietary-preference", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "PREFERENCE_ID"
+								}
+							]
+						},
+						"description": "Update dietary preferences (requires MANAGE_USER_DIETARY_PREFERENCES permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Dietary Preferences",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-dietary-preference/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dietary-preference", ""]
+						},
+						"description": "Delete dietary preferences (requires MANAGE_USER_DIETARY_PREFERENCES permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Dish Interactions",
+			"item": [
+				{
+					"name": "Record View",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"dishId\": \"DISH_ID\",\n  \"dishSlug\": \"dish-slug\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-dish-interaction/view/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-interaction", "view", ""]
+						},
+						"description": "Record dish view (requires MANAGE_USER_DISH_INTERACTIONS permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Record Cooked",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"dishId\": \"DISH_ID\",\n  \"dishSlug\": \"dish-slug\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-dish-interaction/cooked/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-interaction", "cooked", ""]
+						},
+						"description": "Mark dish as cooked (requires MANAGE_USER_DISH_INTERACTIONS permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Rate Dish",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"dishId\": \"DISH_ID\",\n  \"dishSlug\": \"dish-slug\",\n  \"rating\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-dish-interaction/rate/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-interaction", "rate", ""]
+						},
+						"description": "Rate dish (1-5) (requires MANAGE_USER_DISH_INTERACTIONS permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Record Share",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"dishId\": \"DISH_ID\",\n  \"dishSlug\": \"dish-slug\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-dish-interaction/share/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-interaction", "share", ""]
+						},
+						"description": "Record dish share (requires MANAGE_USER_DISH_INTERACTIONS permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Interactions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-dish-interaction/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-interaction", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "dishSlug",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "cooked",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "minRating",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get user's dish interactions (requires MANAGE_USER_DISH_INTERACTIONS permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Top Interacted Dishes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-dish-interaction/top/?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-interaction", "top", ""],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get top interacted dishes (requires MANAGE_USER_DISH_INTERACTIONS permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Dish Popularity",
+			"item": [
+				{
+					"name": "Get Trending Dishes",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish-popularity/trending/?limit=10&period=week",
+							"host": ["{{base_url}}"],
+							"path": ["dish-popularity", "trending", ""],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "period",
+									"value": "week",
+									"description": "day, week, or month"
+								},
+								{
+									"key": "mealCategories",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get trending dishes (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Popular Dishes",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish-popularity/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["dish-popularity", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "minAverageRating",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "minTrendingScore",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "minPopularityScore",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "sortBy",
+									"value": "",
+									"disabled": true,
+									"description": "trending, popular, rating, or views"
+								}
+							]
+						},
+						"description": "Get popular dishes with filters (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Popularity Metrics",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish-popularity/:dishSlug/",
+							"host": ["{{base_url}}"],
+							"path": ["dish-popularity", ":dishSlug", ""],
+							"variable": [
+								{
+									"key": "dishSlug",
+									"value": "dish-slug"
+								}
+							]
+						},
+						"description": "Get popularity metrics for a dish (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Popularity Metrics",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dish-popularity/:dishSlug/update/?dishId=DISH_ID",
+							"host": ["{{base_url}}"],
+							"path": ["dish-popularity", ":dishSlug", "update", ""],
+							"query": [
+								{
+									"key": "dishId",
+									"value": "DISH_ID"
+								}
+							],
+							"variable": [
+								{
+									"key": "dishSlug",
+									"value": "dish-slug"
+								}
+							]
+						},
+						"description": "Update popularity metrics (requires UPDATE_DISH_POPULARITY permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Dish Collections",
+			"item": [
+				{
+					"name": "Create Collection",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"My Birthday 2026\",\n  \"description\": \"Dishes for my birthday party\",\n  \"occasion\": \"birthday\",\n  \"eventDate\": \"2026-06-15T00:00:00Z\",\n  \"dishSlugs\": [\"pasta-carbonara\", \"caesar-salad\", \"tiramisu\"],\n  \"tags\": [\"party\", \"special\"],\n  \"isPublic\": false,\n  \"color\": \"#FF6B6B\",\n  \"icon\": \"birthday-cake\",\n  \"sortOrder\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-dish-collection/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-collection", ""]
+						},
+						"description": "Create a dish collection (requires MANAGE_USER_DISH_COLLECTIONS permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Collections",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-dish-collection/?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-collection", ""],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "occasion",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "keyword",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "tags",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "isPublic",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get user's collections (requires MANAGE_USER_DISH_COLLECTIONS permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Collection By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-dish-collection/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-collection", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "COLLECTION_ID"
+								}
+							]
+						},
+						"description": "Get collection by ID (requires MANAGE_USER_DISH_COLLECTIONS permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Collection",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Collection Name\",\n  \"description\": \"Updated description\",\n  \"dishSlugs\": [\"pasta-carbonara\", \"tiramisu\"],\n  \"isPublic\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-dish-collection/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-collection", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "COLLECTION_ID"
+								}
+							]
+						},
+						"description": "Update collection (requires MANAGE_USER_DISH_COLLECTIONS permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Collection",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-dish-collection/:id/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-collection", ":id", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "COLLECTION_ID"
+								}
+							]
+						},
+						"description": "Delete collection (requires MANAGE_USER_DISH_COLLECTIONS permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Dish to Collection",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collectionId\": \"COLLECTION_ID\",\n  \"dishSlug\": \"dish-slug\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-dish-collection/add-dish/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-collection", "add-dish", ""]
+						},
+						"description": "Add dish to collection (requires MANAGE_USER_DISH_COLLECTIONS permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Dish from Collection",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/user-dish-collection/:id/dishes/:dishSlug/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-collection", ":id", "dishes", ":dishSlug", ""],
+							"variable": [
+								{
+									"key": "id",
+									"value": "COLLECTION_ID"
+								},
+								{
+									"key": "dishSlug",
+									"value": "dish-slug"
+								}
+							]
+						},
+						"description": "Remove dish from collection (requires MANAGE_USER_DISH_COLLECTIONS permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Reorder Dishes",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collectionId\": \"COLLECTION_ID\",\n  \"dishSlugs\": [\"dish-3\", \"dish-1\", \"dish-2\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-dish-collection/reorder/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-collection", "reorder", ""]
+						},
+						"description": "Reorder dishes in collection (requires MANAGE_USER_DISH_COLLECTIONS permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Duplicate Collection",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"collectionId\": \"COLLECTION_ID\",\n  \"newName\": \"Copy of My Collection\",\n  \"copyPublic\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/user-dish-collection/duplicate/",
+							"host": ["{{base_url}}"],
+							"path": ["user-dish-collection", "duplicate", ""]
+						},
+						"description": "Duplicate collection (requires MANAGE_USER_DISH_COLLECTIONS permission)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Personalized Random",
+			"item": [
+				{
+					"name": "Get Personalized Random Dishes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/personalized-random/?limit=10&includeFavorites=true&includeSaved=true&includeTrending=true&applyDietaryPreferences=true&favoriteWeight=1.0&savedWeight=1.0&interactionWeight=1.0&trendingWeight=1.0&ratingWeight=1.0&randomnessLevel=0.3",
+							"host": ["{{base_url}}"],
+							"path": ["personalized-random", ""],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "mealCategories",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "excludeDishSlugs",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "includeFavorites",
+									"value": "true"
+								},
+								{
+									"key": "includeSaved",
+									"value": "true"
+								},
+								{
+									"key": "includeTrending",
+									"value": "true"
+								},
+								{
+									"key": "applyDietaryPreferences",
+									"value": "true"
+								},
+								{
+									"key": "favoriteWeight",
+									"value": "1.0",
+									"description": "0-1"
+								},
+								{
+									"key": "savedWeight",
+									"value": "1.0",
+									"description": "0-1"
+								},
+								{
+									"key": "interactionWeight",
+									"value": "1.0",
+									"description": "0-1"
+								},
+								{
+									"key": "trendingWeight",
+									"value": "1.0",
+									"description": "0-1"
+								},
+								{
+									"key": "ratingWeight",
+									"value": "1.0",
+									"description": "0-1"
+								},
+								{
+									"key": "randomnessLevel",
+									"value": "0.3",
+									"description": "0=fully personalized, 1=fully random"
+								}
+							]
+						},
+						"description": "Get personalized random dish recommendations (requires ACCESS_PERSONALIZED_RANDOM permission)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Preference Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/personalized-random/preference-summary/",
+							"host": ["{{base_url}}"],
+							"path": ["personalized-random", "preference-summary", ""]
+						},
+						"description": "Get user's preference summary (requires VIEW_USER_PREFERENCE_SUMMARY permission)"
+					},
+					"response": []
+				}
+			]
 		}
 	]
 }

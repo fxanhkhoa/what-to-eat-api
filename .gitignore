@@ -21,3 +21,11 @@
 go.work
 .env
 firebase-credential.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
