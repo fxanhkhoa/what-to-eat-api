@@ -9,6 +9,7 @@ on:
 
 jobs:
   test:
+    name: Run Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,9 +22,9 @@ jobs:
       - name: Run unit tests
         run: go test ./...
 
-  build:
+  build-check:
+    name: Build Check (No Deploy)
     runs-on: ubuntu-latest
-    environment: development
     needs: [test]
     steps:
       - uses: actions/checkout@v4
@@ -34,49 +35,10 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push
-        id: docker_build
+      - name: Build Docker image (validation only)
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: fxanhkhoa/what-to-eat-api:latest
-
-  deploy:
-    environment: development
-    needs: [build]
-    if: github.ref == 'refs/heads/develop' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Copy docker-compose.yml via SCP
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DRATINI_HOST }}
-          username: ${{ secrets.DRATINI_USERNAME }}
-          password: ${{ secrets.DRATINI_PASSWORD }}
-          port: ${{ secrets.PORT }}
-          source: "docker-compose.yml"
-          target: "what-to-eat-api"
-
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DRATINI_HOST }}
-          username: ${{ secrets.DRATINI_USERNAME }}
-          password: ${{ secrets.DRATINI_PASSWORD }}
-          port: ${{ secrets.PORT }}
-          script: |
-            cd what-to-eat-api
-            docker compose down || true
-            docker compose pull
-            docker compose up -d
+          push: false
+          tags: fxanhkhoa/what-to-eat-api:develop-check
