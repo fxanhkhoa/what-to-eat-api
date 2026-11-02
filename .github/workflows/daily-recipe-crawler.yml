@@ -1,0 +1,49 @@
+name: Daily Recipe Crawler & Ingestion
+
+on:
+  schedule:
+    # Runs everyday at 01:00 UTC (08:00 AM Vietnam Time GMT+7)
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+    inputs:
+      crawl_limit:
+        description: 'Number of recipes to crawl and ingest'
+        required: false
+        default: '5'
+      categories:
+        description: 'Comma-separated categories (e.g. mon-chien,mon-xao,mon-kho)'
+        required: false
+        default: 'mon-chien,mon-xao,mon-kho,mon-canh,mon-nuong,mon-hap'
+
+jobs:
+  crawl-and-ingest:
+    name: Crawl & Ingest Dishes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'scripts/crawler/requirements.txt'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r scripts/crawler/requirements.txt
+
+      - name: Run Crawler & AI Ingestion
+        env:
+          MONGODB_CONNECTION_STRING: ${{ secrets.MONGODB_CONNECTION_STRING }}
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME || 'what-to-eat' }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DAILY_CRAWL_LIMIT: ${{ github.event.inputs.crawl_limit || '5' }}
+          CRAWL_CATEGORIES: ${{ github.event.inputs.categories || 'mon-chien,mon-xao,mon-kho,mon-canh,mon-nuong,mon-hap' }}
+        run: |
+          python scripts/crawler/auto_crawl_ingest.py
+
