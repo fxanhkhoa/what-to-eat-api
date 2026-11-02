@@ -29,6 +29,7 @@ load_dotenv()
 MONGODB_URI = os.getenv("MONGODB_CONNECTION_STRING")
 DATABASE_NAME = os.getenv("DATABASE_NAME", "what-to-eat")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 DEFAULT_CATEGORIES = [
     "món chiên giòn ngon",
@@ -135,7 +136,7 @@ def discover_and_structure_recipes(category_keyword: str, count: int = 2) -> Lis
 
     # Step 1: Search the web via Google Search Grounding
     search_response = ai_client.models.generate_content(
-        model="gemini-2.5-flash",
+        model=GEMINI_MODEL,
         contents=search_prompt,
         config=types.GenerateContentConfig(
             tools=[types.Tool(google_search=types.GoogleSearch())],
@@ -164,7 +165,7 @@ def discover_and_structure_recipes(category_keyword: str, count: int = 2) -> Lis
     """
 
     structured_response = ai_client.models.generate_content(
-        model="gemini-2.5-flash",
+        model=GEMINI_MODEL,
         contents=format_prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -302,6 +303,7 @@ def main():
     print("=" * 60)
 
     total_inserted = 0
+    error_count = 0
 
     for category in CRAWL_CATEGORIES:
         if total_inserted >= DAILY_CRAWL_LIMIT:
@@ -323,11 +325,16 @@ def main():
                 time.sleep(1)
 
         except Exception as err:
-            print(f"[ERROR] Failed during category '{category}': {err}", file=sys.stderr)
+            print(f"[ERROR] Failed during category '{category}': {err}")
+            error_count += 1
 
     print("=" * 60)
-    print(f"Job completed. Ingested {total_inserted} new dishes.")
+    print(f"Job completed. Ingested {total_inserted} new dishes. Total category errors: {error_count}")
     print("=" * 60)
+
+    if total_inserted == 0 and error_count > 0:
+        print("[FAIL] No dishes were ingested due to API or network errors.", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
