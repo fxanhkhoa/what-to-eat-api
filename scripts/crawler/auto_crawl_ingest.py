@@ -96,10 +96,6 @@ class RecipeExtraction(BaseModel):
         description="List of applicable categories from: ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK', 'FRIED', 'GRILLED', 'STEAMED', 'BAKED', 'SOUP', 'NOODLE', 'RICE', 'SEAFOOD', 'MEAT', 'VEGETARIAN', 'TRADITIONAL', 'STREET_FOOD']"
     )
     tags: List[str] = Field(default=[], description="Từ khóa tìm kiếm không dấu và có dấu")
-    suggested_related_dishes: List[str] = Field(
-        default=[],
-        description="Tên 2-4 món ăn Việt Nam phổ biến liên quan hoặc ăn kèm hợp vị (ví dụ: món kho ăn kèm món canh, món xào)"
-    )
     ingredients: List[ParsedIngredient]
 
 class RecipeBatch(BaseModel):
@@ -129,7 +125,7 @@ def discover_recipes_with_search_grounding(category_keyword: str, count: int) ->
     Search Google for authentic, popular Vietnamese cooking recipes matching: '{category_keyword}'.
     Look up real recipe pages from reputable Vietnamese culinary websites (such as dienmayxanh.com/vao-bep, cookpad.com/vn, monngonmoingay.com, vnexpress.net/du-lich/am-thuc).
     Select {count} distinct popular recipes that Vietnamese families love to eat.
-    For each, extract title (VI & EN), source URL, short description, HTML steps, thumbnail image URL, prep/cook times, difficulty, categories, tags, complete ingredients, and 2-4 suggested related or pairing Vietnamese dish names (e.g. braised dishes paired with sour soup, boiled greens, or stir-fries).
+    For each, extract title (VI & EN), source URL, short description, HTML steps, thumbnail image URL, prep/cook times, difficulty, categories, tags, and complete ingredients.
     """
 
     search_response = ai_client.models.generate_content(
@@ -191,7 +187,6 @@ def discover_recipes_direct_ai(category_keyword: str, count: int) -> List[Recipe
     7. Difficulty: EASY, MEDIUM, or HARD.
     8. Meal categories (FRIED, SOUP, MEAT, SEAFOOD, TRADITIONAL, etc.) and tags.
     9. Complete ingredient list with realistic quantities, units (g, kg, ml, quả, muỗng canh), notes, and nutritional categories.
-    10. Suggested 2-4 authentic related or pairing Vietnamese dish names (e.g. braised dishes paired with sour soup, boiled vegetables, or stir-fries).
     """
 
     structured_response = ai_client.models.generate_content(
@@ -227,7 +222,6 @@ def get_curated_pool() -> List[RecipeExtraction]:
             difficulty_level="EASY",
             meal_categories=["FRIED", "LUNCH", "DINNER", "MEAT", "TRADITIONAL"],
             tags=["gà chiên nước mắm", "cánh gà", "món chiên", "cơm gia đình", "fried chicken"],
-            suggested_related_dishes=["Canh chua cá lóc miền Tây", "Bò xào cần tỏi", "Rau muống xào tỏi", "Canh cải thịt bằm"],
             ingredients=[
                 ParsedIngredient(name_vi="Cánh gà", name_en="Chicken wings", quantity=500.0, measure="g", note="chọn cánh tươi ngon", category="PROTEIN FOODS"),
                 ParsedIngredient(name_vi="Nước mắm", name_en="Fish sauce", quantity=30.0, measure="ml", note="nước mắm truyền thống", category="CONDIMENTS AND SAUCES"),
@@ -252,7 +246,6 @@ def get_curated_pool() -> List[RecipeExtraction]:
             difficulty_level="MEDIUM",
             meal_categories=["LUNCH", "DINNER", "MEAT", "TRADITIONAL"],
             tags=["thịt kho tàu", "thịt kho hột vịt", "món kho", "nước dừa", "braised pork"],
-            suggested_related_dishes=["Canh chua cá lóc miền Tây", "Dưa giá đỗ chua ngọt", "Rau muống xào tỏi", "Canh mướp mồng tơi"],
             ingredients=[
                 ParsedIngredient(name_vi="Thịt ba chỉ", name_en="Pork belly", quantity=600.0, measure="g", note="chọn thịt ba rọi có nạc mỡ đều", category="PROTEIN FOODS"),
                 ParsedIngredient(name_vi="Nước dừa tươi", name_en="Fresh coconut water", quantity=500.0, measure="ml", note="1 quả dừa xiêm", category="BEVERAGES NONALCOHOLIC"),
@@ -277,7 +270,6 @@ def get_curated_pool() -> List[RecipeExtraction]:
             difficulty_level="MEDIUM",
             meal_categories=["SOUP", "LUNCH", "DINNER", "SEAFOOD", "TRADITIONAL"],
             tags=["canh chua", "cá lóc", "canh chua miền tây", "món canh", "sour soup"],
-            suggested_related_dishes=["Cá kho tộ", "Thịt kho tàu nước dừa", "Sườn ram mặn", "Thịt ba chỉ luộc"],
             ingredients=[
                 ParsedIngredient(name_vi="Cá lóc", name_en="Snakehead fish", quantity=600.0, measure="g", note="cá đồng tươi sống", category="PROTEIN FOODS"),
                 ParsedIngredient(name_vi="Me chua chín", name_en="Ripe tamarind", quantity=50.0, measure="g", note="dầm lấy nước cốt", category="FRUIT"),
@@ -304,7 +296,6 @@ def get_curated_pool() -> List[RecipeExtraction]:
             difficulty_level="EASY",
             meal_categories=["LUNCH", "DINNER", "MEAT", "TRADITIONAL"],
             tags=["sườn xào chua ngọt", "sườn non", "món xào", "cơm gia đình", "sweet and sour ribs"],
-            suggested_related_dishes=["Canh rau ngót nấu thịt bằm", "Đậu sốt cà chua", "Canh bí đao sườn heo", "Rau cải xào tỏi"],
             ingredients=[
                 ParsedIngredient(name_vi="Sườn non", name_en="Pork ribs", quantity=500.0, measure="g", note="chọn sườn non nhiều nạc", category="PROTEIN FOODS"),
                 ParsedIngredient(name_vi="Giấm gạo", name_en="Rice vinegar", quantity=30.0, measure="ml", note=None, category="CONDIMENTS AND SAUCES"),
@@ -328,7 +319,6 @@ def get_curated_pool() -> List[RecipeExtraction]:
             difficulty_level="EASY",
             meal_categories=["LUNCH", "DINNER", "MEAT", "TRADITIONAL"],
             tags=["bò xào cần tỏi", "thịt bò", "cần tây", "món xào", "stir fried beef"],
-            suggested_related_dishes=["Canh chua cá lóc miền Tây", "Thịt kho tàu nước dừa", "Canh ngao nấu chua", "Trứng chiên hành"],
             ingredients=[
                 ParsedIngredient(name_vi="Thịt bò thăn", name_en="Beef tenderloin", quantity=300.0, measure="g", note="thái mỏng ngang thớ", category="PROTEIN FOODS"),
                 ParsedIngredient(name_vi="Cần tây", name_en="Celery", quantity=150.0, measure="g", note="rửa sạch cắt khúc", category="VEGETABLES"),
@@ -353,7 +343,6 @@ def get_curated_pool() -> List[RecipeExtraction]:
             difficulty_level="EASY",
             meal_categories=["FRIED", "LUNCH", "DINNER", "TRADITIONAL"],
             tags=["tóp mỡ", "sốt cà chua", "món chiên", "dân dã", "pork cracklings"],
-            suggested_related_dishes=["Rau muống luộc", "Canh cua rau đay mồng tơi", "Thịt luộc chấm mắm tôm", "Đậu phụ rán"],
             ingredients=[
                 ParsedIngredient(name_vi="Tóp mỡ", name_en="Pork cracklings", quantity=250.0, measure="g", note="đã chiên giòn", category="PROTEIN FOODS"),
                 ParsedIngredient(name_vi="Cà chua", name_en="Tomatoes", quantity=3.0, measure="quả", note="chín đỏ băm nhỏ", category="VEGETABLES"),
@@ -410,69 +399,67 @@ def get_or_create_ingredient(ing: ParsedIngredient, author_id: str = "system-cra
 def find_and_link_related_dishes(
     dish_id: ObjectId,
     dish_slug: str,
-    suggested_names: List[str],
+    title_vi: str,
     meal_categories: List[str],
     tags: List[str],
     limit: int = 4
 ) -> List[str]:
     """
-    Finds 2-4 relevant related dish IDs in MongoDB and establishes bidirectional links.
-    1. Matches suggested_names by title or slug keywords in MongoDB.
-    2. Matches dishes sharing mealCategories or tags.
-    3. Falls back to recent dishes if still fewer than 2.
-    4. Updates matching related dishes to include dish_id in their relatedDishes array.
+    Searches the MongoDB database for 2-4 related dishes (referenced by their ObjectIds).
+    1. Searches dishes sharing tags in MongoDB.
+    2. Searches dishes sharing culinary keywords from title/slug in MongoDB.
+    3. Searches dishes sharing mealCategories in MongoDB.
+    4. Falls back to recent dishes if fewer than 2.
+    5. Bidirectionally links by adding dish_id to each matched dish's relatedDishes array.
     """
     target_id_str = str(dish_id)
     matched_ids: List[str] = []
     seen_ids = {target_id_str}
 
-    print(f"    [~] Searching related dishes for '{dish_slug}'...")
+    print(f"    [~] Searching database for dishes related to '{dish_slug}'...")
 
-    # Strategy 1: Match suggested dish names in DB
-    for name in (suggested_names or []):
-        if len(matched_ids) >= limit:
-            break
-        name_clean = name.strip()
-        if not name_clean:
-            continue
-
-        name_slug = slugify(name_clean)
-        kw_list = [w for w in name_slug.split('-') if len(w) > 2]
-
-        candidate = None
-        # 1a. Search by title.data
-        try:
-            for doc in dishes_col.find({"deleted": False, "title.data": re.compile(re.escape(name_clean), re.IGNORECASE)}).limit(5):
-                did = str(doc["_id"])
-                if did not in seen_ids and doc.get("slug") != dish_slug:
-                    candidate = doc
-                    break
-        except Exception:
-            pass
-
-        # 1b. Search by slug keywords if title didn't match
-        if not candidate and kw_list:
-            slug_regex = '.*'.join(kw_list[:2]) if len(kw_list) >= 2 else kw_list[0]
+    # Strategy 1: Match existing dishes sharing tags
+    if tags:
+        clean_tags = [t.strip().lower() for t in tags if t and len(t.strip()) > 1]
+        for tag in clean_tags:
+            if len(matched_ids) >= limit:
+                break
             try:
-                for doc in dishes_col.find({"deleted": False, "slug": re.compile(slug_regex, re.IGNORECASE)}).limit(5):
+                for doc in dishes_col.find({"deleted": False, "tags": tag}).limit(limit):
                     did = str(doc["_id"])
                     if did not in seen_ids and doc.get("slug") != dish_slug:
-                        candidate = doc
-                        break
+                        matched_ids.append(did)
+                        seen_ids.add(did)
+                        cand_title = next((t["data"] for t in doc.get("title", []) if t.get("lang") == "vi"), doc.get("slug"))
+                        print(f"      [+] Found in DB by tag '{tag}' -> {cand_title} (ID: {did})")
+                        if len(matched_ids) >= limit:
+                            break
             except Exception:
                 pass
 
-        if candidate:
-            cid = str(candidate["_id"])
-            matched_ids.append(cid)
-            seen_ids.add(cid)
-            cand_title = next((t["data"] for t in candidate.get("title", []) if t.get("lang") == "vi"), candidate.get("slug"))
-            print(f"      [+] Matched suggested '{name_clean}' -> {cand_title} (ID: {cid})")
-
-    # Strategy 2: Match by mealCategories
+    # Strategy 2: Match existing dishes by culinary keywords from title
     if len(matched_ids) < limit:
+        title_words = [w for w in slugify(title_vi).split('-') if len(w) > 2]
+        for kw in title_words:
+            if len(matched_ids) >= limit:
+                break
+            try:
+                for doc in dishes_col.find({"deleted": False, "slug": re.compile(re.escape(kw), re.IGNORECASE)}).limit(limit):
+                    did = str(doc["_id"])
+                    if did not in seen_ids and doc.get("slug") != dish_slug:
+                        matched_ids.append(did)
+                        seen_ids.add(did)
+                        cand_title = next((t["data"] for t in doc.get("title", []) if t.get("lang") == "vi"), doc.get("slug"))
+                        print(f"      [+] Found in DB by keyword '{kw}' -> {cand_title} (ID: {did})")
+                        if len(matched_ids) >= limit:
+                            break
+            except Exception:
+                pass
+
+    # Strategy 3: Match existing dishes by mealCategories
+    if len(matched_ids) < limit and meal_categories:
         needed = limit - len(matched_ids)
-        for cat in (meal_categories or []):
+        for cat in meal_categories:
             if len(matched_ids) >= limit:
                 break
             try:
@@ -482,13 +469,13 @@ def find_and_link_related_dishes(
                         matched_ids.append(did)
                         seen_ids.add(did)
                         cand_title = next((t["data"] for t in doc.get("title", []) if t.get("lang") == "vi"), doc.get("slug"))
-                        print(f"      [+] Matched category '{cat}' -> {cand_title} (ID: {did})")
+                        print(f"      [+] Found in DB by category '{cat}' -> {cand_title} (ID: {did})")
                         if len(matched_ids) >= limit:
                             break
             except Exception:
                 pass
 
-    # Strategy 3: Fallback to recent dishes
+    # Strategy 4: Fallback to recent dishes
     if len(matched_ids) < 2:
         needed = limit - len(matched_ids)
         try:
@@ -498,13 +485,13 @@ def find_and_link_related_dishes(
                     matched_ids.append(did)
                     seen_ids.add(did)
                     cand_title = next((t["data"] for t in doc.get("title", []) if t.get("lang") == "vi"), doc.get("slug"))
-                    print(f"      [+] Matched recent fallback -> {cand_title} (ID: {did})")
+                    print(f"      [+] Found in DB by recent fallback -> {cand_title} (ID: {did})")
                     if len(matched_ids) >= limit:
                         break
         except Exception:
             pass
 
-    # Bidirectional link: update each related dish document
+    # Bidirectional link: update each related dish document in the database
     for rel_id_str in matched_ids:
         try:
             if ObjectId.is_valid(rel_id_str):
@@ -549,11 +536,11 @@ def ingest_recipe(recipe: RecipeExtraction, author_id: str = "github-actions-cra
             "note": ing.note
         })
 
-    # Find and bidirectionally link related dishes
+    # Search database for related dishes and establish bidirectional links
     related_dish_ids = find_and_link_related_dishes(
         dish_id=new_dish_id,
         dish_slug=dish_slug,
-        suggested_names=recipe.suggested_related_dishes,
+        title_vi=recipe.title_vi,
         meal_categories=recipe.meal_categories,
         tags=recipe.tags,
         limit=4
@@ -610,17 +597,13 @@ def main():
     print("=" * 60)
 
     total_inserted = 0
-    exploration_queue = list(CRAWL_CATEGORIES)
-    visited_topics = set()
 
     # --------------------------------------------------------------------------
     # Step 1 & 2: Try AI Search Grounding, then Direct AI Generation
     # --------------------------------------------------------------------------
-    while exploration_queue and total_inserted < DAILY_CRAWL_LIMIT:
-        category = exploration_queue.pop(0)
-        if category in visited_topics:
-            continue
-        visited_topics.add(category)
+    for category in CRAWL_CATEGORIES:
+        if total_inserted >= DAILY_CRAWL_LIMIT:
+            break
 
         remaining = DAILY_CRAWL_LIMIT - total_inserted
         fetch_count = min(remaining, 2)
@@ -645,13 +628,6 @@ def main():
                 break
             if ingest_recipe(recipe):
                 total_inserted += 1
-                # If crawl limit remains, queue suggested related dishes that don't exist yet!
-                for rel_name in (recipe.suggested_related_dishes or []):
-                    rel_slug = slugify(rel_name)
-                    if not dishes_col.find_one({"deleted": False, "slug": rel_slug}):
-                        if rel_name not in visited_topics and rel_name not in exploration_queue:
-                            print(f"  [+] Discovered new related dish topic to explore: '{rel_name}'")
-                            exploration_queue.append(rel_name)
             time.sleep(1)
 
     # --------------------------------------------------------------------------
@@ -665,12 +641,6 @@ def main():
                 break
             if ingest_recipe(recipe):
                 total_inserted += 1
-                # Queue uncreated related dishes from curated pool if still needed
-                for rel_name in (recipe.suggested_related_dishes or []):
-                    rel_slug = slugify(rel_name)
-                    if not dishes_col.find_one({"deleted": False, "slug": rel_slug}):
-                        if rel_name not in visited_topics and rel_name not in exploration_queue:
-                            exploration_queue.append(rel_name)
 
     print("=" * 60)
     print(f"Job completed successfully. Total new dishes ingested: {total_inserted}")
