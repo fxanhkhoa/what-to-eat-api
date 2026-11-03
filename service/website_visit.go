@@ -57,7 +57,7 @@ func (s *WebsiteVisitService) Find(query model.BaseDto) ([]*WebsiteVisit, int64,
 	}
 	defer cursor.Close(context.TODO())
 
-	var visits []*WebsiteVisit
+	visits := make([]*WebsiteVisit, 0)
 	if err = cursor.All(context.TODO(), &visits); err != nil {
 		return nil, 0, err
 	}
