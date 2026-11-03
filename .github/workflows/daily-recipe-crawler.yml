@@ -3,7 +3,7 @@ name: Daily Recipe Crawler & Ingestion
 on:
   schedule:
     # Runs everyday at 01:00 UTC (08:00 AM Vietnam Time GMT+7)
-    - cron: '0 1 * * *'
+    - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
       crawl_limit:
