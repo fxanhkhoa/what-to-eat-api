@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"what-to-eat/be/helper"
 	"what-to-eat/be/model"
 	"what-to-eat/be/service"
@@ -12,23 +13,29 @@ import (
 
 type WebsiteVisitController struct{}
 
-// TrackVisitDto is used to optionally accept IP from frontend
-type TrackVisitDto struct {
-	IP string `json:"ip,omitempty"`
-}
-
 func (ctrl *WebsiteVisitController) TrackVisit(c echo.Context) error {
-	// Try to get IP from request body first
-	var dto TrackVisitDto
-	ip := c.RealIP() // Default to server-detected IP
+	var dto model.TrackVisitDto
 
-	// If client sends IP in request body, use that instead
-	if err := c.Bind(&dto); err == nil && dto.IP != "" {
-		ip = dto.IP
+	// Bind JSON body if present
+	_ = c.Bind(&dto)
+
+	ip := c.RealIP()
+	if dto.IP == "" {
+		dto.IP = ip
 	}
 
+	// Read Cloudflare or reverse proxy headers if available
+	cfCountry := c.Request().Header.Get("CF-IPCountry")
+	xCountry := c.Request().Header.Get("X-Country-Code")
+	headerCountryCode := cfCountry
+	if headerCountryCode == "" {
+		headerCountryCode = xCountry
+	}
+	headerCountry := c.Request().Header.Get("X-Country-Name")
+
 	userAgent := c.Request().UserAgent()
-	err := (&service.WebsiteVisitService{}).TrackVisit(ip, userAgent)
+
+	err := (&service.WebsiteVisitService{}).TrackVisit(dto, ip, userAgent, headerCountry, headerCountryCode)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
@@ -44,17 +51,27 @@ func (ctrl *WebsiteVisitController) CountVisits(c echo.Context) error {
 }
 
 func (ctrl *WebsiteVisitController) Find(c echo.Context) error {
-	var query model.BaseDto
+	var query model.WebsiteVisitQueryDto
 
 	var err error
 	query.Page, err = strconv.Atoi(c.QueryParam("page"))
-	if err != nil || query.Page < 0 {
+	if err != nil || query.Page < 1 {
 		query.Page = 1
 	}
 
 	query.Limit, err = strconv.Atoi(c.QueryParam("limit"))
-	if err != nil || query.Limit < 0 {
+	if err != nil || query.Limit < 1 {
 		query.Limit = 10
+	}
+
+	query.Country = strings.TrimSpace(c.QueryParam("country"))
+	query.Action = strings.TrimSpace(c.QueryParam("action"))
+	query.Search = strings.TrimSpace(c.QueryParam("search"))
+
+	if daysStr := c.QueryParam("days"); daysStr != "" {
+		if days, err := strconv.Atoi(daysStr); err == nil && days > 0 {
+			query.Days = days
+		}
 	}
 
 	visits, count, err := (&service.WebsiteVisitService{}).Find(query)
@@ -66,4 +83,20 @@ func (ctrl *WebsiteVisitController) Find(c echo.Context) error {
 		Data:  visits,
 		Count: count,
 	})
+}
+
+func (ctrl *WebsiteVisitController) GetAnalytics(c echo.Context) error {
+	days := 30
+	if daysStr := c.QueryParam("days"); daysStr != "" {
+		if parsedDays, err := strconv.Atoi(daysStr); err == nil && parsedDays > 0 {
+			days = parsedDays
+		}
+	}
+
+	analytics, err := (&service.WebsiteVisitService{}).GetAnalytics(days)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, analytics)
 }

@@ -15,5 +15,6 @@ func UseWebsiteVisitGroup(group *echo.Group) {
 
 	group.POST("/visit/", controller.TrackVisit)
 	group.GET("/visit/count/", controller.CountVisits, aG.AuthGuard, rG.RoleGuard([]string{constants.FIND_ALL_WEBSITE_VISIT}))
+	group.GET("/visit/analytics/", controller.GetAnalytics, aG.AuthGuard, rG.RoleGuard([]string{constants.FIND_ALL_WEBSITE_VISIT}))
 	group.GET("/visit/", controller.Find, aG.AuthGuard, rG.RoleGuard([]string{constants.FIND_ALL_WEBSITE_VISIT}))
 }
