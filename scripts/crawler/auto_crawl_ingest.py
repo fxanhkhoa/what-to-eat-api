@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """
-Resilient Recipe Ingestion Pipeline for what-to-eat
-Multi-tiered ingestion pipeline that NEVER stops and guarantees dish ingestion:
+Resilient World Recipe Ingestion Pipeline for what-to-eat
+Multi-tiered ingestion pipeline that NEVER stops and guarantees dish ingestion from cuisines all over the world:
   - Tier 1: Gemini 3.8 Flash with Google Search Grounding
   - Tier 2: Gemini Direct AI Recipe Generation (no search quota needed, bypasses 429)
-  - Tier 3: Curated Vietnamese Recipe Pool (guarantees ingestion even if AI quota is 100% exhausted)
+  - Tier 3: Curated World Recipe Pool (guarantees ingestion even if AI quota is 100% exhausted)
 """
 
+import math
 import os
+import random
 import re
 import sys
 import time
 import unicodedata
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -32,17 +34,28 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 DEFAULT_CATEGORIES = [
-    "món chiên giòn ngon",
-    "món xào đưa cơm",
-    "món kho đậm đà",
-    "món canh thanh mát",
-    "món nướng thơm lừng",
-    "món hấp thanh đạm"
+    "Italian cuisine",
+    "Japanese cuisine",
+    "Mexican cuisine",
+    "Indian cuisine",
+    "Thai cuisine",
+    "Korean cuisine",
+    "French cuisine",
+    "Chinese cuisine",
+    "Greek and Mediterranean cuisine",
+    "Middle Eastern cuisine",
+    "Spanish cuisine",
+    "American comfort food",
+    "Vietnamese cuisine",
+    "Moroccan and North African cuisine",
+    "Turkish cuisine",
+    "Latin American cuisine",
 ]
 
+_raw_categories = os.getenv("CRAWL_CATEGORIES", "").strip()
 CRAWL_CATEGORIES = [
-    c.strip() for c in os.getenv("CRAWL_CATEGORIES", ",".join(DEFAULT_CATEGORIES)).split(",") if c.strip()
-]
+    c.strip() for c in _raw_categories.split(",") if c.strip()
+] or list(DEFAULT_CATEGORIES)
 DAILY_CRAWL_LIMIT = int(os.getenv("DAILY_CRAWL_LIMIT", "2"))
 
 if not MONGODB_URI:
@@ -69,33 +82,33 @@ if GEMINI_API_KEY:
 # Pydantic Schemas for AI Structured Extraction
 # ==============================================================================
 class ParsedIngredient(BaseModel):
-    name_vi: str = Field(description="Tên nguyên liệu tiếng Việt chuẩn, ví dụ: 'Thịt ba chỉ'")
-    name_en: str = Field(description="Standard English ingredient name, e.g. 'Pork belly'")
-    quantity: float = Field(default=1.0, description="Số lượng dạng số thực (ví dụ 300 cho 300g, 2 cho 2 quả)")
-    measure: str = Field(default="g", description="Đơn vị tính, ví dụ: 'g', 'kg', 'ml', 'quả', 'muỗng canh', 'nhánh'")
-    note: Optional[str] = Field(default=None, description="Ghi chú thêm về nguyên liệu nếu có")
+    name_vi: str = Field(description="Tên nguyên liệu tiếng Việt chuẩn, ví dụ: 'Phô mai Parmesan', 'Dầu ô liu'")
+    name_en: str = Field(description="Standard English ingredient name, e.g. 'Parmesan cheese', 'Olive oil'")
+    quantity: float = Field(default=1.0, description="Numeric quantity (e.g. 300 for 300g, 2 for 2 pieces)")
+    measure: str = Field(default="g", description="Unit of measurement, e.g. 'g', 'kg', 'ml', 'tbsp', 'tsp', 'cup', 'piece', 'clove'")
+    note: Optional[str] = Field(default=None, description="Additional preparation note if any (e.g. 'finely chopped', 'grated')")
     category: str = Field(
         default="OTHER",
         description="Must be one of: 'PROTEIN FOODS', 'VEGETABLES', 'GRAINS', 'FATS AND OILS', 'CONDIMENTS AND SAUCES', 'HERBS AND SPICES', 'MILK AND DAIRY', 'FRUIT', 'NUTS AND SEEDS', 'OTHER'"
     )
 
 class RecipeExtraction(BaseModel):
-    title_vi: str = Field(description="Tên món ăn tiếng Việt ngắn gọn, hấp dẫn")
-    title_en: str = Field(description="English translation of the dish title")
-    short_desc_vi: str = Field(description="Mô tả ngắn gọn về hương vị món ăn (1-2 câu tiếng Việt)")
-    short_desc_en: str = Field(description="Short description in English (1-2 sentences)")
+    title_vi: str = Field(description="Tên món ăn tiếng Việt ngắn gọn, hấp dẫn (ví dụ: 'Mì Ý Carbonara')")
+    title_en: str = Field(description="Authentic dish title in English (e.g. 'Spaghetti Carbonara')")
+    short_desc_vi: str = Field(description="Mô tả ngắn gọn về hương vị và xuất xứ món ăn (1-2 câu tiếng Việt)")
+    short_desc_en: str = Field(description="Short description of the dish's flavor and culinary origin in English (1-2 sentences)")
     content_vi: str = Field(description="Các bước thực hiện chi tiết bằng tiếng Việt, định dạng HTML ngữ nghĩa (<p>, <h4>, <ul>, <li>)")
-    content_en: str = Field(description="Detailed step-by-step cooking instructions in English formatted in clean semantic HTML")
+    content_en: str = Field(description="Detailed step-by-step cooking instructions in English formatted in clean semantic HTML (<p>, <h4>, <ul>, <li>)")
     thumbnail: Optional[str] = Field(default=None, description="Direct URL to high-resolution image of finished dish")
-    source_url: str = Field(description="Original website URL where the recipe was found (e.g. from dienmayxanh.com/vao-bep, cookpad.com/vn, monngonmoingay.com, etc.)")
-    preparation_time: int = Field(default=15, description="Thời gian chuẩn bị ước tính (phút)")
-    cooking_time: int = Field(default=20, description="Thời gian nấu ước tính (phút)")
-    difficulty_level: str = Field(default="MEDIUM", description="Độ khó: 'EASY', 'MEDIUM', or 'HARD'")
+    source_url: str = Field(description="Original website URL where the recipe was found (e.g. seriouseats.com, bbcgoodfood.com, allrecipes.com, recipetineats.com, justonecookbook.com, bonappetit.com, foodnetwork.com, cookpad.com, etc.)")
+    preparation_time: int = Field(default=15, description="Estimated preparation time in minutes")
+    cooking_time: int = Field(default=20, description="Estimated cooking time in minutes")
+    difficulty_level: str = Field(default="MEDIUM", description="Difficulty level: 'EASY', 'MEDIUM', or 'HARD'")
     meal_categories: List[str] = Field(
         default=["LUNCH", "DINNER"],
         description="List of applicable categories from: ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK', 'FRIED', 'GRILLED', 'STEAMED', 'BAKED', 'SOUP', 'NOODLE', 'RICE', 'SEAFOOD', 'MEAT', 'VEGETARIAN', 'TRADITIONAL', 'STREET_FOOD']"
     )
-    tags: List[str] = Field(default=[], description="Từ khóa tìm kiếm không dấu và có dấu")
+    tags: List[str] = Field(default=[], description="Bilingual search keywords in English and Vietnamese including cuisine/country of origin (e.g. 'italian', 'món ý', 'pasta', 'carbonara')")
     ingredients: List[ParsedIngredient]
 
 class RecipeBatch(BaseModel):
@@ -104,28 +117,77 @@ class RecipeBatch(BaseModel):
 # ==============================================================================
 # Helpers
 # ==============================================================================
+STOPWORDS = {"with", "and", "the", "for", "mon", "cach", "style", "homemade", "authentic"}
+
 def slugify(text: str) -> str:
-    """Converts Vietnamese string into clean URL slug."""
+    """Converts text (including accented international and Vietnamese characters) into a clean URL slug."""
     text = unicodedata.normalize('NFKD', text)
     text = text.replace('đ', 'd').replace('Đ', 'D')
     text = text.encode('ascii', 'ignore').decode('utf-8')
     text = re.sub(r'[^\w\s-]', '', text).strip().lower()
     return re.sub(r'[-\s]+', '-', text)
 
+def get_existing_dish_titles(limit: int = 80) -> List[str]:
+    """Fetches recent existing dish titles from MongoDB to avoid redundant AI suggestions."""
+    titles: List[str] = []
+    try:
+        cursor = dishes_col.find(
+            {"deleted": False},
+            {"title": 1, "slug": 1}
+        ).sort("createdAt", -1).limit(limit)
+        for doc in cursor:
+            title_list = doc.get("title") or []
+            en_title = next((t.get("data") for t in title_list if t.get("lang") == "en" and t.get("data")), None)
+            vi_title = next((t.get("data") for t in title_list if t.get("lang") == "vi" and t.get("data")), None)
+            chosen = en_title or vi_title or doc.get("slug")
+            if chosen:
+                titles.append(chosen)
+    except Exception as e:
+        print(f"  [WARN] Could not fetch existing dish titles: {e}")
+    return titles
+
+def _build_exclusion_clause(exclude_titles: Optional[List[str]]) -> str:
+    """Formats the list of existing dish titles to exclude from AI generation."""
+    if not exclude_titles:
+        return ""
+    return f"Do NOT suggest any dishes already in our database, such as: {', '.join(exclude_titles[-80:])}"
+
+def _extract_display_title(doc: dict) -> str:
+    """Returns a readable display title preferring English, then Vietnamese, then slug."""
+    title_list = doc.get("title") or []
+    return (
+        next((t.get("data") for t in title_list if t.get("lang") == "en" and t.get("data")), None)
+        or next((t.get("data") for t in title_list if t.get("lang") == "vi" and t.get("data")), None)
+        or doc.get("slug", "")
+    )
+
 # ==============================================================================
 # Tier 1 & Tier 2: AI Recipe Discovery
 # ==============================================================================
-def discover_recipes_with_search_grounding(category_keyword: str, count: int) -> List[RecipeExtraction]:
+def discover_recipes_with_search_grounding(
+    category_keyword: str,
+    count: int,
+    exclude_titles: Optional[List[str]] = None
+) -> List[RecipeExtraction]:
     """Tier 1: Try Gemini with Google Search Grounding."""
     if not ai_client:
         return []
 
     print(f"  [Tier 1: Search Grounding] Searching Google for '{category_keyword}'...")
+    exclude_clause = _build_exclusion_clause(exclude_titles)
     search_prompt = f"""
-    Search Google for authentic, popular Vietnamese cooking recipes matching: '{category_keyword}'.
-    Look up real recipe pages from reputable Vietnamese culinary websites (such as dienmayxanh.com/vao-bep, cookpad.com/vn, monngonmoingay.com, vnexpress.net/du-lich/am-thuc).
-    Select {count} distinct popular recipes that Vietnamese families love to eat.
-    For each, extract title (VI & EN), source URL, short description, HTML steps, thumbnail image URL, prep/cook times, difficulty, categories, tags, and complete ingredients.
+    Search Google for authentic, popular recipes from around the world matching: '{category_keyword}'.
+    Look up real recipe pages from reputable global culinary websites (such as seriouseats.com, bbcgoodfood.com, allrecipes.com, recipetineats.com, justonecookbook.com, bonappetit.com, foodnetwork.com, epicurious.com, cookpad.com, and authentic regional culinary sites).
+    Select {count} distinct, iconic or everyday beloved dishes for this cuisine/category.
+    {exclude_clause}
+    For each dish, extract full bilingual data (both English and Vietnamese):
+    - Title (EN & VI) and short description (EN & VI)
+    - Authentic recipe source_url and high-resolution thumbnail image URL
+    - Step-by-step cooking instructions in semantic HTML (<p>, <h4>, <ul>, <li>) in both EN & VI
+    - Realistic preparation_time and cooking_time (in minutes), difficulty_level ('EASY', 'MEDIUM', or 'HARD')
+    - Applicable meal_categories strictly from: ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK', 'FRIED', 'GRILLED', 'STEAMED', 'BAKED', 'SOUP', 'NOODLE', 'RICE', 'SEAFOOD', 'MEAT', 'VEGETARIAN', 'TRADITIONAL', 'STREET_FOOD']
+    - Bilingual tags (EN & VI) including the cuisine/country of origin
+    - Complete bilingual ingredients with quantities, units, notes, and category strictly from: ['PROTEIN FOODS', 'VEGETABLES', 'GRAINS', 'FATS AND OILS', 'CONDIMENTS AND SAUCES', 'HERBS AND SPICES', 'MILK AND DAIRY', 'FRUIT', 'NUTS AND SEEDS', 'OTHER']
     """
 
     search_response = ai_client.models.generate_content(
@@ -168,25 +230,31 @@ def discover_recipes_with_search_grounding(category_keyword: str, count: int) ->
     batch = RecipeBatch.model_validate_json(structured_response.text)
     return batch.recipes
 
-def discover_recipes_direct_ai(category_keyword: str, count: int) -> List[RecipeExtraction]:
+def discover_recipes_direct_ai(
+    category_keyword: str,
+    count: int,
+    exclude_titles: Optional[List[str]] = None
+) -> List[RecipeExtraction]:
     """Tier 2: Direct Gemini generation (consumes 0 Search Grounding quota, single call)."""
     if not ai_client:
         return []
 
     print(f"  [Tier 2: Direct AI] Generating '{category_keyword}' recipe from culinary knowledge base...")
+    exclude_clause = _build_exclusion_clause(exclude_titles)
     prompt = f"""
-    You are an expert Vietnamese culinary chef and data architect.
-    Generate {count} authentic, widely cooked Vietnamese home recipes matching the category: '{category_keyword}'.
+    You are an expert international chef and culinary data architect with deep knowledge of world cuisines.
+    Generate {count} authentic, beloved recipes matching the cuisine or category: '{category_keyword}'.
+    {exclude_clause}
     Requirements:
-    1. Vietnamese title and English title.
-    2. Provide an authentic source URL citing a reputable Vietnamese recipe page (e.g. https://www.dienmayxanh.com/vao-bep/mon-an-ngon, https://monngonmoingay.com, https://cookpad.com/vn).
-    3. Short descriptions in VI and EN.
-    4. Step-by-step cooking instructions in semantic HTML (<p>, <h4>, <ul>, <li>) in both VI and EN.
-    5. High-resolution food thumbnail URL.
-    6. Realistic prep and cooking times in minutes.
-    7. Difficulty: EASY, MEDIUM, or HARD.
-    8. Meal categories (FRIED, SOUP, MEAT, SEAFOOD, TRADITIONAL, etc.) and tags.
-    9. Complete ingredient list with realistic quantities, units (g, kg, ml, quả, muỗng canh), notes, and nutritional categories.
+    1. Authentic English title and natural Vietnamese translation title.
+    2. Cite a specific reputable international recipe page URL (not a bare homepage, e.g. https://www.seriouseats.com/..., https://www.bbcgoodfood.com/recipes/..., https://www.recipetineats.com/..., https://www.justonecookbook.com/...).
+    3. Short descriptions in both EN and VI mentioning the dish's flavor and culinary origin.
+    4. Detailed step-by-step cooking instructions in semantic HTML (<p>, <h4>, <ul>, <li>) in both EN and VI.
+    5. High-resolution food thumbnail URL if known.
+    6. Realistic preparation_time and cooking_time in minutes.
+    7. Difficulty: 'EASY', 'MEDIUM', or 'HARD'.
+    8. Meal categories strictly from: ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK', 'FRIED', 'GRILLED', 'STEAMED', 'BAKED', 'SOUP', 'NOODLE', 'RICE', 'SEAFOOD', 'MEAT', 'VEGETARIAN', 'TRADITIONAL', 'STREET_FOOD'], plus bilingual tags (EN & VI) including the cuisine/country of origin.
+    9. Complete bilingual ingredient list with realistic quantities, units (g, kg, ml, tbsp, tsp, cup, piece, clove), notes, and nutritional categories strictly from: ['PROTEIN FOODS', 'VEGETABLES', 'GRAINS', 'FATS AND OILS', 'CONDIMENTS AND SAUCES', 'HERBS AND SPICES', 'MILK AND DAIRY', 'FRUIT', 'NUTS AND SEEDS', 'OTHER'].
     """
 
     structured_response = ai_client.models.generate_content(
@@ -195,7 +263,7 @@ def discover_recipes_direct_ai(category_keyword: str, count: int) -> List[Recipe
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=RecipeBatch,
-            temperature=0.4,
+            temperature=0.7,
         ),
     )
 
@@ -203,178 +271,375 @@ def discover_recipes_direct_ai(category_keyword: str, count: int) -> List[Recipe
     return batch.recipes
 
 # ==============================================================================
-# Tier 3: Curated Vietnamese Recipe Catalog Fallback
+# Tier 3: Curated World Recipe Catalog Fallback
 # ==============================================================================
 def get_curated_pool() -> List[RecipeExtraction]:
-    """Tier 3: Built-in authentic Vietnamese recipes pool ensuring at least 1 dish is ALWAYS ingested."""
+    """Tier 3: Built-in authentic world recipes pool ensuring at least 1 dish is ALWAYS ingested."""
     return [
         RecipeExtraction(
-            title_vi="Gà chiên nước mắm",
-            title_en="Crispy Fried Chicken in Fish Sauce",
-            short_desc_vi="Món gà chiên với lớp da giòn rụm quyện đẫm sốt nước mắm tỏi ớt mặn ngọt đậm đà, cực kỳ đưa cơm.",
-            short_desc_en="Crispy fried chicken coated in a savory, sweet, and garlicky Vietnamese fish sauce glaze.",
-            content_vi="<h4>Bước 1: Sơ chế và ướp gà</h4><p>Cánh gà rửa sạch với nước muối loãng, chặt khúc vừa ăn. Ướp với hạt nêm, tiêu, hành tím băm trong 20 phút.</p><h4>Bước 2: Chiên gà giòn</h4><p>Lăn gà qua một lớp mỏng bột bắp. Cho vào chảo dầu sôi chiên vàng giòn hai mặt rồi vớt ra ráo dầu.</p><h4>Bước 3: Làm sốt nước mắm</h4><p>Pha 2 muỗng nước mắm, 2 muỗng đường, 1 muỗng tương ớt, 1 muỗng nước lọc. Phi thơm tỏi ớt băm, đổ hỗn hợp sốt vào đun sôi sền sệt.</p><h4>Bước 4: Hoàn thành</h4><p>Trút gà đã chiên vào chảo sốt, đảo đều tay ở lửa vừa khoảng 2-3 phút cho sốt áo đều miếng gà. Tắt bếp và thưởng thức cùng cơm nóng.</p>",
-            content_en="<h4>Step 1: Prep and Marinate</h4><p>Wash chicken wings with salted water and cut into pieces. Marinate with seasoning powder, pepper, and minced shallots for 20 minutes.</p><h4>Step 2: Deep Fry</h4><p>Lightly dust chicken in cornstarch. Fry in hot oil until golden and crispy, then drain.</p><h4>Step 3: Fish Sauce Glaze</h4><p>Mix 2 tbsp fish sauce, 2 tbsp sugar, 1 tbsp chili sauce, and 1 tbsp water. Sauté minced garlic and chili until fragrant, then add the sauce mixture and simmer until thickened.</p><h4>Step 4: Glaze and Serve</h4><p>Toss fried chicken into the sauce over medium heat for 2-3 minutes until evenly coated. Serve hot with steamed rice.</p>",
-            thumbnail="https://cdn.tgdd.vn/Files/2021/08/17/1375775/bi-quyet-lam-canh-ga-chien-nuoc-mam-gion-rum-thom-nuc-mui-202108171447228224.jpg",
-            source_url="https://www.dienmayxanh.com/vao-bep/cach-lam-canh-ga-chien-nuoc-mam-thom-ngon-dam-da-00628",
+            title_vi="Mì Ý Carbonara",
+            title_en="Spaghetti Carbonara",
+            short_desc_vi="Món mì Ý kinh điển vùng Rome với sốt trứng béo ngậy, phô mai Pecorino Romano mặn mà và thịt má heo muối guanciale giòn thơm.",
+            short_desc_en="Classic Roman pasta tossed in a silky emulsion of egg yolks, Pecorino Romano cheese, cracked black pepper, and crisp cured pork.",
+            content_vi="<h4>Bước 1: Sơ chế nguyên liệu</h4><p>Thái thịt ba rọi xông khói hoặc guanciale thành miếng vuông nhỏ. Đánh tan lòng đỏ trứng với phô mai Pecorino Romano bào mịn và nhiều tiêu đen xay.</p><h4>Bước 2: Luộc mì</h4><p>Luộc spaghetti trong nước sôi pha muối ít hơn hướng dẫn 1 phút để mì đạt độ dai al dente, giữ lại khoảng 150ml nước luộc mì.</p><h4>Bước 3: Áp chảo thịt</h4><p>Chiên thịt ở lửa vừa đến khi mỡ tiết ra và miếng thịt vàng giòn, tắt bếp cho chảo nguội bớt.</p><h4>Bước 4: Trộn sốt</h4><p>Cho mì nóng vào chảo thịt cùng một ít nước luộc mì, sau đó trút hỗn hợp trứng phô mai vào đảo nhanh tay ngoài bếp để tạo sốt sánh mịn mà không bị vón cục. Rắc thêm phô mai và tiêu đen.</p>",
+            content_en="<h4>Step 1: Prep Ingredients</h4><p>Dice cured pork cheek or pancetta into small lardons. Whisk egg yolks with finely grated Pecorino Romano and generous freshly cracked black pepper.</p><h4>Step 2: Cook Pasta</h4><p>Boil spaghetti in salted water until just al dente, reserving 150 ml of starchy pasta cooking water before draining.</p><h4>Step 3: Crisp the Pork</h4><p>Render the pork over medium heat until golden and crisp, then remove the pan from the heat.</p><h4>Step 4: Emulsify Sauce</h4><p>Toss hot pasta with the pork and a splash of pasta water, then stir in the egg-cheese mixture off the heat, adding pasta water as needed to form a glossy sauce.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Carbonara",
+            preparation_time=10,
+            cooking_time=15,
+            difficulty_level="MEDIUM",
+            meal_categories=["LUNCH", "DINNER", "NOODLE", "MEAT", "TRADITIONAL"],
+            tags=["italian", "món ý", "italy", "pasta", "carbonara", "spaghetti", "mì ý"],
+            ingredients=[
+                ParsedIngredient(name_vi="Mì Ý Spaghetti", name_en="Spaghetti", quantity=400.0, measure="g", note="dry pasta", category="GRAINS"),
+                ParsedIngredient(name_vi="Thịt má heo muối hoặc ba rọi xông khói", name_en="Guanciale or pancetta", quantity=150.0, measure="g", note="diced", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Lòng đỏ trứng gà", name_en="Egg yolks", quantity=4.0, measure="piece", note="room temperature", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Phô mai Pecorino Romano", name_en="Pecorino Romano cheese", quantity=80.0, measure="g", note="finely grated", category="MILK AND DAIRY"),
+                ParsedIngredient(name_vi="Tiêu đen xay", name_en="Black pepper", quantity=5.0, measure="g", note="freshly cracked", category="HERBS AND SPICES"),
+            ]
+        ),
+        RecipeExtraction(
+            title_vi="Cà ri gà chiên xù Nhật Bản",
+            title_en="Chicken Katsu Curry",
+            short_desc_vi="Ức gà chiên xù panko giòn rụm ăn kèm cơm Nhật dẻo thơm và nước sốt cà ri nâu sánh đậm vị ngọt dịu.",
+            short_desc_en="Crispy panko-breaded chicken cutlet served over steamed rice with rich, mildly spiced Japanese brown curry sauce.",
+            content_vi="<h4>Bước 1: Nấu sốt cà ri</h4><p>Xào thơm hành tây thái lát, cà rốt và khoai tây với dầu ăn. Đổ nước dùng vào ninh mềm khoảng 15 phút, sau đó thả viên cà ri Nhật vào khuấy tan đến khi sánh.</p><h4>Bước 2: Chuẩn bị gà</h4><p>Dần mỏng ức gà, nêm muối tiêu. Lần lượt áo gà qua bột mì, trứng đánh tan và vụn bánh mì panko.</p><h4>Bước 3: Chiên giòn gà</h4><p>Chiên gà ngập dầu ở 175°C khoảng 4-5 phút mỗi mặt đến khi vàng giòn rồi vớt ra để ráo, thái lát vừa ăn.</p><h4>Bước 4: Trình bày</h4><p>Xới cơm nóng ra đĩa, xếp gà katsu lên trên và chan đều sốt cà ri nóng hổi.</p>",
+            content_en="<h4>Step 1: Simmer Curry Sauce</h4><p>Sauté sliced onions, carrots, and diced potatoes until softened. Add water or stock, simmer 15 minutes, then stir in Japanese curry roux blocks until glossy and thick.</p><h4>Step 2: Bread the Chicken</h4><p>Pound chicken breasts to even thickness and season with salt and pepper. Dredge in flour, dip in beaten egg, and coat thoroughly with panko breadcrumbs.</p><h4>Step 3: Deep Fry</h4><p>Fry at 175°C for 4-5 minutes until crisp and golden brown. Rest briefly, then slice into strips.</p><h4>Step 4: Serve</h4><p>Plate steamed short-grain rice, top with sliced chicken katsu, and ladle hot curry sauce alongside.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Katsu_curry",
             preparation_time=20,
             cooking_time=25,
-            difficulty_level="EASY",
-            meal_categories=["FRIED", "LUNCH", "DINNER", "MEAT", "TRADITIONAL"],
-            tags=["gà chiên nước mắm", "cánh gà", "món chiên", "cơm gia đình", "fried chicken"],
-            ingredients=[
-                ParsedIngredient(name_vi="Cánh gà", name_en="Chicken wings", quantity=500.0, measure="g", note="chọn cánh tươi ngon", category="PROTEIN FOODS"),
-                ParsedIngredient(name_vi="Nước mắm", name_en="Fish sauce", quantity=30.0, measure="ml", note="nước mắm truyền thống", category="CONDIMENTS AND SAUCES"),
-                ParsedIngredient(name_vi="Đường cát", name_en="Sugar", quantity=30.0, measure="g", note=None, category="SUGARS"),
-                ParsedIngredient(name_vi="Tỏi", name_en="Garlic", quantity=4.0, measure="nhánh", note="băm nhuyễn", category="HERBS AND SPICES"),
-                ParsedIngredient(name_vi="Ớt hiểm", name_en="Chili", quantity=2.0, measure="quả", note="băm nhỏ", category="VEGETABLES"),
-                ParsedIngredient(name_vi="Bột bắp", name_en="Cornstarch", quantity=30.0, measure="g", note="tạo độ giòn", category="GRAINS"),
-                ParsedIngredient(name_vi="Dầu ăn", name_en="Cooking oil", quantity=200.0, measure="ml", note="để chiên ngập dầu", category="FATS AND OILS")
-            ]
-        ),
-        RecipeExtraction(
-            title_vi="Thịt kho tàu nước dừa",
-            title_en="Vietnamese Braised Pork and Eggs in Coconut Water",
-            short_desc_vi="Món thịt kho tàu truyền thống mềm béo, trứng vịt đậm đà thấm đẫm vị ngọt thanh tự nhiên từ nước dừa xiêm.",
-            short_desc_en="Traditional Vietnamese braised pork belly and hard-boiled eggs simmered in sweet fresh coconut water.",
-            content_vi="<h4>Bước 1: Sơ chế</h4><p>Thịt ba chỉ cạo sạch lông, rửa với muối loãng, cắt miếng vuông cỡ 3-4cm. Luộc sơ qua nước sôi 2 phút rồi vớt ra rửa sạch.</p><h4>Bước 2: Ướp thịt</h4><p>Ướp thịt với 3 muỗng nước mắm, 1 muỗng đường, hành tỏi băm, tiêu trong ít nhất 30 phút để thịt ngấm vị.</p><h4>Bước 3: Luộc trứng</h4><p>Trứng vịt luộc chín, bóc vỏ sạch sẽ.</p><h4>Bước 4: Kho thịt</h4><p>Thắng nước màu từ đường cho có màu cánh gián, cho thịt vào đảo săn. Đổ nước dừa tươi vào ngập thịt, đun sôi rồi hạ nhỏ lửa đun liu riu khoảng 40 phút. Cho trứng vào kho thêm 20 phút đến khi thịt mềm rục, nước kho sánh vàng óng ả.</p>",
-            content_en="<h4>Step 1: Preparation</h4><p>Clean pork belly and cut into 3-4 cm cubes. Blanch in boiling water for 2 minutes, then rinse.</p><h4>Step 2: Marinate</h4><p>Marinate pork with fish sauce, sugar, minced garlic, shallots, and black pepper for at least 30 minutes.</p><h4>Step 3: Boil Eggs</h4><p>Boil duck eggs until hard-boiled, then peel.</p><h4>Step 4: Braise</h4><p>Caramelize sugar until amber, add marinated pork and sear. Pour in fresh coconut water to cover the meat, bring to a boil, then simmer on low heat for 40 minutes. Add eggs and simmer for 20 more minutes until pork is melt-in-mouth tender.</p>",
-            thumbnail="https://cdn.tgdd.vn/Files/2021/07/28/1371391/cach-nau-thit-kho-tau-trung-cut-ngon-chuan-vi-mien-nam-202107281635398254.jpg",
-            source_url="https://www.dienmayxanh.com/vao-bep/cach-lam-thit-kho-tau-ngon-chuan-vi-00123",
-            preparation_time=30,
-            cooking_time=60,
             difficulty_level="MEDIUM",
-            meal_categories=["LUNCH", "DINNER", "MEAT", "TRADITIONAL"],
-            tags=["thịt kho tàu", "thịt kho hột vịt", "món kho", "nước dừa", "braised pork"],
+            meal_categories=["LUNCH", "DINNER", "FRIED", "RICE", "MEAT"],
+            tags=["japanese", "món nhật", "japan", "katsu curry", "cà ri nhật", "panko chicken"],
             ingredients=[
-                ParsedIngredient(name_vi="Thịt ba chỉ", name_en="Pork belly", quantity=600.0, measure="g", note="chọn thịt ba rọi có nạc mỡ đều", category="PROTEIN FOODS"),
-                ParsedIngredient(name_vi="Nước dừa tươi", name_en="Fresh coconut water", quantity=500.0, measure="ml", note="1 quả dừa xiêm", category="BEVERAGES NONALCOHOLIC"),
-                ParsedIngredient(name_vi="Trứng vịt", name_en="Duck eggs", quantity=5.0, measure="quả", note="luộc chín bóc vỏ", category="PROTEIN FOODS"),
-                ParsedIngredient(name_vi="Nước mắm", name_en="Fish sauce", quantity=45.0, measure="ml", note=None, category="CONDIMENTS AND SAUCES"),
-                ParsedIngredient(name_vi="Đường", name_en="Sugar", quantity=30.0, measure="g", note="dùng ướp và thắng màu", category="SUGARS"),
-                ParsedIngredient(name_vi="Hành tím", name_en="Shallots", quantity=4.0, measure="củ", note="băm nhuyễn", category="HERBS AND SPICES"),
-                ParsedIngredient(name_vi="Tỏi", name_en="Garlic", quantity=4.0, measure="nhánh", note="băm nhuyễn", category="HERBS AND SPICES")
+                ParsedIngredient(name_vi="Ức gà", name_en="Chicken breast", quantity=400.0, measure="g", note="boneless, skinless", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Vụn bánh mì Panko", name_en="Panko breadcrumbs", quantity=100.0, measure="g", note=None, category="GRAINS"),
+                ParsedIngredient(name_vi="Viên sốt cà ri Nhật", name_en="Japanese curry roux", quantity=100.0, measure="g", note="mild or medium", category="CONDIMENTS AND SAUCES"),
+                ParsedIngredient(name_vi="Hành tây", name_en="Onion", quantity=1.0, measure="piece", note="thinly sliced", category="VEGETABLES"),
+                ParsedIngredient(name_vi="Cà rốt", name_en="Carrot", quantity=100.0, measure="g", note="sliced", category="VEGETABLES"),
+                ParsedIngredient(name_vi="Cơm trắng hạt ngắn", name_en="Short-grain white rice", quantity=300.0, measure="g", note="steamed", category="GRAINS"),
+                ParsedIngredient(name_vi="Dầu ăn", name_en="Cooking oil", quantity=250.0, measure="ml", note="for frying", category="FATS AND OILS"),
             ]
         ),
         RecipeExtraction(
-            title_vi="Canh chua cá lóc miền Tây",
-            title_en="Mekong Delta Sour Snakehead Fish Soup",
-            short_desc_vi="Món canh chua cá lóc thanh mát giải nhiệt với vị chua dịu từ me, cá lóc ngọt thịt cùng bạc hà, giá và thơm giòn ngọt.",
-            short_desc_en="A refreshing Southern Vietnamese sour soup with tender snakehead fish, tamarind, pineapple, and crunchy vegetables.",
-            content_vi="<h4>Bước 1: Sơ chế cá và rau củ</h4><p>Cá lóc làm sạch vảy, xát muối và chanh khử tanh, cắt khúc vừa ăn. Bạc hà tước vỏ, thái vát. Thơm cắt lát. Cà chua bổ múi cau. Đậu bắp cắt xéo.</p><h4>Bước 2: Nấu nước me</h4><p>Nấu sôi 1 lít nước, cho vắt me vào dầm nát lọc lấy nước chua, bỏ hạt.</p><h4>Bước 3: Nấu canh</h4><p>Cho cá lóc vào nồi nước sôi nấu chín tới trong 5 phút. Vớt bọt cho nước trong. Cho thơm, cà chua, đậu bắp vào đun 3 phút. Nêm nước mắm, đường, muối cho vừa vị chua ngọt hài hòa.</p><h4>Bước 4: Hoàn tất</h4><p>Cho bạc hà và giá đỗ vào đun sôi bùng lên rồi tắt bếp ngay. Múc canh ra tô, rắc ngò gai, ngổ và tỏi phi thơm lên trên.</p>",
-            content_en="<h4>Step 1: Prep Ingredients</h4><p>Clean snakehead fish with salt and lime, cut into steaks. Peel and slice elephant ear stems, slice pineapple, wedge tomatoes, and slice okra.</p><h4>Step 2: Tamarind Broth</h4><p>Boil 1 liter of water, dissolve tamarind pulp and strain the sour juice back into the pot.</p><h4>Step 3: Cook Fish and Vegetables</h4><p>Gently add fish to simmering broth and cook for 5 minutes. Skim foam. Add pineapple, tomato, and okra. Season with fish sauce, sugar, and salt to balance sweet and sour.</p><h4>Step 4: Finish and Garnish</h4><p>Add elephant ear stems and bean sprouts, boil for 30 seconds and remove from heat. Garnish with saw-tooth herb, rice paddy herb, and fried garlic.</p>",
-            thumbnail="https://cdn.tgdd.vn/Files/2021/06/03/1357064/cach-nau-canh-chua-ca-loc-chuan-vi-mien-tay-202106031702588371.jpg",
-            source_url="https://www.dienmayxanh.com/vao-bep/cach-nau-canh-chua-ca-loc-mien-tay-00456",
+            title_vi="Bánh Taco thịt heo nướng al Pastor",
+            title_en="Tacos al Pastor",
+            short_desc_vi="Món taco đường phố nổi tiếng của Mexico với thịt heo ướp ớt guajillo và dứa thơm lừng, kẹp bánh ngô mềm và hành ngò.",
+            short_desc_en="Iconic Mexican street tacos filled with smoky chili-and-achiote marinated pork, sweet grilled pineapple, onion, and cilantro.",
+            content_vi="<h4>Bước 1: Làm sốt ướp</h4><p>Ngâm mềm ớt khô guajillo rồi xay nhuyễn cùng bột điều achiote, tỏi, giấm táo, nước dứa và thì là Ai Cập.</p><h4>Bước 2: Ướp thịt heo</h4><p>Thái mỏng thịt nạc vai heo, trộn đều với sốt ướp và để thấm ít nhất 2 tiếng trong tủ lạnh.</p><h4>Bước 3: Áp chảo hoặc nướng</h4><p>Nướng hoặc áp chảo lửa lớn thịt heo cùng dứa thái lát cho xém cạnh thơm lừng, sau đó băm nhỏ vừa ăn.</p><h4>Bước 4: Cuốn taco</h4><p>Làm nóng bánh tortilla ngô, xếp thịt nướng, dứa nướng, hành tây băm, ngò rí và vắt thêm chanh tươi.</p>",
+            content_en="<h4>Step 1: Blend Marinade</h4><p>Rehydrate dried guajillo chilies and blend with achiote paste, garlic, cider vinegar, pineapple juice, oregano, and cumin until smooth.</p><h4>Step 2: Marinate Pork</h4><p>Thinly slice pork shoulder, coat evenly in the marinade, and refrigerate for at least 2 hours.</p><h4>Step 3: Sear and Chop</h4><p>Grill or sear the pork and pineapple slices over high heat until charred at the edges, then chop into bite-sized pieces.</p><h4>Step 4: Assemble Tacos</h4><p>Warm corn tortillas on a skillet, fill with pork and charred pineapple, and top with diced white onion, cilantro, and fresh lime.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Al_pastor",
             preparation_time=25,
             cooking_time=20,
             difficulty_level="MEDIUM",
-            meal_categories=["SOUP", "LUNCH", "DINNER", "SEAFOOD", "TRADITIONAL"],
-            tags=["canh chua", "cá lóc", "canh chua miền tây", "món canh", "sour soup"],
+            meal_categories=["LUNCH", "DINNER", "GRILLED", "MEAT", "STREET_FOOD", "TRADITIONAL"],
+            tags=["mexican", "món mexico", "mexico", "tacos", "al pastor", "street food", "bánh taco"],
             ingredients=[
-                ParsedIngredient(name_vi="Cá lóc", name_en="Snakehead fish", quantity=600.0, measure="g", note="cá đồng tươi sống", category="PROTEIN FOODS"),
-                ParsedIngredient(name_vi="Me chua chín", name_en="Ripe tamarind", quantity=50.0, measure="g", note="dầm lấy nước cốt", category="FRUIT"),
-                ParsedIngredient(name_vi="Cà chua", name_en="Tomatoes", quantity=2.0, measure="quả", note="bổ múi cau", category="VEGETABLES"),
-                ParsedIngredient(name_vi="Dứa", name_en="Pineapple", quantity=150.0, measure="g", note="thái lát", category="FRUIT"),
-                ParsedIngredient(name_vi="Bạc hà", name_en="Elephant ear stem", quantity=100.0, measure="g", note="tước vỏ thái vát", category="VEGETABLES"),
-                ParsedIngredient(name_vi="Đậu bắp", name_en="Okra", quantity=100.0, measure="g", note="cắt xéo", category="VEGETABLES"),
-                ParsedIngredient(name_vi="Giá đỗ", name_en="Bean sprouts", quantity=100.0, measure="g", note="rửa sạch", category="VEGETABLES"),
-                ParsedIngredient(name_vi="Ngò gai và rau ngổ", name_en="Sawtooth and rice paddy herb", quantity=30.0, measure="g", note="cắt nhỏ", category="HERBS AND SPICES"),
-                ParsedIngredient(name_vi="Nước mắm", name_en="Fish sauce", quantity=30.0, measure="ml", note=None, category="CONDIMENTS AND SAUCES")
+                ParsedIngredient(name_vi="Thịt nạc vai heo", name_en="Pork shoulder", quantity=600.0, measure="g", note="thinly sliced", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Bánh Tortilla bắp", name_en="Corn tortillas", quantity=8.0, measure="piece", note="warmed", category="GRAINS"),
+                ParsedIngredient(name_vi="Dứa tươi", name_en="Fresh pineapple", quantity=200.0, measure="g", note="sliced", category="FRUIT"),
+                ParsedIngredient(name_vi="Ớt khô Guajillo", name_en="Dried guajillo chilies", quantity=3.0, measure="piece", note="seeded and soaked", category="HERBS AND SPICES"),
+                ParsedIngredient(name_vi="Sốt điều Achiote", name_en="Achiote paste", quantity=30.0, measure="g", note=None, category="CONDIMENTS AND SAUCES"),
+                ParsedIngredient(name_vi="Hành tây trắng", name_en="White onion", quantity=1.0, measure="piece", note="finely diced", category="VEGETABLES"),
+                ParsedIngredient(name_vi="Ngò rí", name_en="Fresh cilantro", quantity=30.0, measure="g", note="chopped", category="HERBS AND SPICES"),
             ]
         ),
         RecipeExtraction(
-            title_vi="Sườn xào chua ngọt",
-            title_en="Sweet and Sour Pork Ribs",
-            short_desc_vi="Sườn non mềm ngọt thịt bao phủ bởi lớp sốt chua ngọt sánh đỏ bắt mắt, thơm nức mũi.",
-            short_desc_en="Tender pork ribs coated in a glossy, tangy sweet-and-sour glaze.",
-            content_vi="<h4>Bước 1: Sơ chế sườn</h4><p>Sườn non chặt miếng vừa ăn, chần qua nước sôi rồi rửa sạch để ráo. Ướp với hạt nêm, tiêu, hành tím băm 15 phút.</p><h4>Bước 2: Rán vàng sườn</h4><p>Cho sườn vào chảo rán vàng đều hai mặt rồi vớt ra đĩa.</p><h4>Bước 3: Pha sốt chua ngọt</h4><p>Khuấy đều 2 muỗng giấm gạo, 2 muỗng đường, 2 muỗng nước mắm, 2 muỗng tương cà và 3 muỗng nước lọc.</p><h4>Bước 4: Xào sườn</h4><p>Phi thơm tỏi băm, đổ hỗn hợp sốt vào đun sôi lăn tăn. Trút sườn rán vào đảo đều cho ngấm sốt. Đun nhỏ lửa đến khi sốt keo lại bám đều quanh từng miếng sườn là hoàn thành.</p>",
-            content_en="<h4>Step 1: Prep Ribs</h4><p>Cut ribs into bite-sized pieces, blanch in boiling water and rinse. Marinate with seasoning, pepper, and shallots for 15 minutes.</p><h4>Step 2: Pan-fry</h4><p>Pan-fry ribs until golden on all sides, then remove to a plate.</p><h4>Step 3: Sweet & Sour Sauce</h4><p>Whisk together 2 tbsp rice vinegar, 2 tbsp sugar, 2 tbsp fish sauce, 2 tbsp ketchup, and 3 tbsp water.</p><h4>Step 4: Toss and Simmer</h4><p>Sauté garlic, pour in sauce until simmering. Add ribs and toss well. Simmer gently until sauce thickens into a glossy glaze coating the ribs.</p>",
-            thumbnail="https://cdn.tgdd.vn/Files/2021/04/14/1343187/cach-lam-suon-xao-chua-ngot-mien-bac-chuan-vi-thom-ngon-dam-da-202104141641045952.jpg",
-            source_url="https://www.dienmayxanh.com/vao-bep/cach-lam-suon-xao-chua-ngot-dam-da-00789",
+            title_vi="Gà nấu bơ cà ri Ấn Độ",
+            title_en="Butter Chicken (Murgh Makhani)",
+            short_desc_vi="Thịt gà ướp sữa chua nướng thơm quyện trong nước sốt cà chua bơ béo mịn và gia vị garam masala nồng ấm.",
+            short_desc_en="Tender spiced chicken simmered in a velvety, aromatic tomato-butter cream sauce finished with fenugreek leaves.",
+            content_vi="<h4>Bước 1: Ướp và áp chảo gà</h4><p>Ướp thịt đùi gà cắt khối với sữa chua không đường, gừng tỏi băm, nước cốt chanh và garam masala trong 30 phút rồi áp chảo xém cạnh.</p><h4>Bước 2: Nấu nền sốt cà chua</h4><p>Đun chảy bơ, xào thơm hành tây, gừng tỏi, thêm cà chua nghiền, bột ớt Kashmir và đun nhỏ lửa 15 phút rồi xay nhuyễn.</p><h4>Bước 3: Hoàn thiện sốt bơ</h4><p>Đổ sốt trở lại nồi, thêm gà đã áp chảo, kem tươi whipping cream, một ít bơ và lá cỏ cà ri khô kasuri methi.</p><h4>Bước 4: Thưởng thức</h4><p>Đun liu riu thêm 8 phút cho gà thấm vị, dùng nóng với bánh mì naan hoặc cơm basmati.</p>",
+            content_en="<h4>Step 1: Marinate and Sear Chicken</h4><p>Marinate boneless chicken thighs in yogurt, ginger-garlic paste, lemon juice, and garam masala for 30 minutes, then sear until lightly charred.</p><h4>Step 2: Simmer Tomato Base</h4><p>Melt butter in a pan, sauté onions and aromatics, add crushed tomatoes and Kashmiri chili powder, simmer 15 minutes, and blend smooth.</p><h4>Step 3: Finish with Cream and Butter</h4><p>Return sauce to the pan with seared chicken, heavy cream, extra butter, and crushed dried fenugreek leaves.</p><h4>Step 4: Simmer and Serve</h4><p>Simmer gently for 8 minutes until chicken is cooked through. Serve hot with naan or basmati rice.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Butter_chicken",
+            preparation_time=30,
+            cooking_time=30,
+            difficulty_level="MEDIUM",
+            meal_categories=["LUNCH", "DINNER", "MEAT", "TRADITIONAL"],
+            tags=["indian", "món ấn độ", "india", "butter chicken", "curry", "cà ri gà bơ"],
+            ingredients=[
+                ParsedIngredient(name_vi="Thịt đùi gà không xương", name_en="Boneless chicken thighs", quantity=600.0, measure="g", note="cut into bite-sized pieces", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Sữa chua không đường", name_en="Plain yogurt", quantity=120.0, measure="g", note="for marinade", category="MILK AND DAIRY"),
+                ParsedIngredient(name_vi="Cà chua nghiền", name_en="Crushed tomatoes", quantity=400.0, measure="g", note=None, category="VEGETABLES"),
+                ParsedIngredient(name_vi="Bơ lạt", name_en="Unsalted butter", quantity=60.0, measure="g", note=None, category="MILK AND DAIRY"),
+                ParsedIngredient(name_vi="Kem tươi whipping cream", name_en="Heavy cream", quantity=100.0, measure="ml", note=None, category="MILK AND DAIRY"),
+                ParsedIngredient(name_vi="Bột gia vị Garam Masala", name_en="Garam masala", quantity=10.0, measure="g", note=None, category="HERBS AND SPICES"),
+                ParsedIngredient(name_vi="Gừng và tỏi băm", name_en="Ginger garlic paste", quantity=20.0, measure="g", note=None, category="HERBS AND SPICES"),
+            ]
+        ),
+        RecipeExtraction(
+            title_vi="Phở xào Pad Thai",
+            title_en="Pad Thai",
+            short_desc_vi="Hủ tiếu gạo Thái Lan xào lửa lớn với tôm tươi, trứng, giá đỗ và nước sốt me chua ngọt mặn hài hòa rắc đậu phộng rang.",
+            short_desc_en="Classic Thai stir-fried rice noodles glazed in tangy tamarind-fish sauce with shrimp, egg, garlic chives, and crushed peanuts.",
+            content_vi="<h4>Bước 1: Ngâm hủ tiếu và pha sốt</h4><p>Ngâm sợi bánh phở khô trong nước ấm cho vừa mềm. Khuấy đều cốt me chua, nước mắm và đường thốt nốt thành sốt Pad Thai.</p><h4>Bước 2: Xào tôm và đậu phụ</h4><p>Phi thơm hành tím và tỏi băm, xào nhanh tôm tươi và đậu phụ chiên cắt hạt lựu cho săn lại.</p><h4>Bước 3: Xào mì và trứng</h4><p>Đẩy tôm sang một bên, đập trứng vào đảo tơi rồi cho sợi phở và sốt me vào đảo đều ở lửa lớn đến khi sợi mì ngấm sốt.</p><h4>Bước 4: Hoàn thành</h4><p>Cho giá đỗ và hẹ cắt khúc vào đảo nhanh 30 giây, trút ra đĩa rắc đậu phộng rang giã dập và kèm chanh tươi.</p>",
+            content_en="<h4>Step 1: Soak Noodles and Mix Sauce</h4><p>Soak dried flat rice noodles in warm water until pliable. Whisk tamarind paste, fish sauce, and palm sugar into a balanced sweet-tangy sauce.</p><h4>Step 2: Sear Shrimp and Tofu</h4><p>Stir-fry minced shallots and garlic in hot oil, then sear shrimp and diced firm tofu until lightly golden.</p><h4>Step 3: Stir-fry Noodles and Egg</h4><p>Push ingredients aside, scramble eggs in the wok, then toss in drained noodles and tamarind sauce over high heat until absorbed.</p><h4>Step 4: Garnish and Serve</h4><p>Fold in bean sprouts and garlic chives for 30 seconds. Serve topped with crushed roasted peanuts and fresh lime wedges.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Pad_thai",
+            preparation_time=20,
+            cooking_time=15,
+            difficulty_level="EASY",
+            meal_categories=["LUNCH", "DINNER", "NOODLE", "SEAFOOD", "STREET_FOOD", "TRADITIONAL"],
+            tags=["thai", "món thái", "thailand", "pad thai", "rice noodles", "street food"],
+            ingredients=[
+                ParsedIngredient(name_vi="Bánh phở khô bản dẹt", name_en="Flat rice noodles", quantity=250.0, measure="g", note="soaked until pliable", category="GRAINS"),
+                ParsedIngredient(name_vi="Tôm tươi bóc vỏ", name_en="Peeled shrimp", quantity=250.0, measure="g", note="deveined", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Trứng gà", name_en="Eggs", quantity=2.0, measure="piece", note=None, category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Cốt me chua", name_en="Tamarind paste", quantity=45.0, measure="g", note=None, category="CONDIMENTS AND SAUCES"),
+                ParsedIngredient(name_vi="Nước mắm", name_en="Fish sauce", quantity=35.0, measure="ml", note=None, category="CONDIMENTS AND SAUCES"),
+                ParsedIngredient(name_vi="Giá đỗ", name_en="Bean sprouts", quantity=100.0, measure="g", note=None, category="VEGETABLES"),
+                ParsedIngredient(name_vi="Đậu phộng rang", name_en="Roasted peanuts", quantity=40.0, measure="g", note="crushed", category="NUTS AND SEEDS"),
+            ]
+        ),
+        RecipeExtraction(
+            title_vi="Cơm trộn Bibimbap Hàn Quốc",
+            title_en="Korean Bibimbap",
+            short_desc_vi="Tô cơm trộn rực rỡ sắc màu với thịt bò xào bulgogi, các loại rau củ xào namul, trứng ốp la và tương ớt gochujang cay ngọt.",
+            short_desc_en="Vibrant Korean mixed rice bowl topped with seasoned sautéed vegetables, savory beef, a sunny-side-up egg, and spicy gochujang sauce.",
+            content_vi="<h4>Bước 1: Xào các loại rau namul</h4><p>Chần cải bó xôi rồi trộn dầu mè, tỏi. Xào riêng từng loại cà rốt thái sợi, bí ngòi và nấm đông cô với chút muối và dầu mè.</p><h4>Bước 2: Xào thịt bò</h4><p>Ướp thịt bò thái mỏng với nước tương, đường, tỏi băm, dầu mè rồi xào nhanh trên lửa lớn cho chín mềm.</p><h4>Bước 3: Chiên trứng và pha sốt</h4><p>Chiên trứng ốp la lòng đào. Trộn tương ớt gochujang với mật ong, giấm gạo, dầu mè và mè rang.</p><h4>Bước 4: Trình bày</h4><p>Cho cơm nóng vào tô, xếp đều thịt bò và các loại rau củ xung quanh, đặt trứng ốp la ở giữa và chan sốt gochujang khi ăn.</p>",
+            content_en="<h4>Step 1: Prepare Vegetable Toppings</h4><p>Blanch spinach and dress with sesame oil and garlic. Separately sauté julienned carrots, zucchini, and shiitake mushrooms with salt and sesame oil.</p><h4>Step 2: Cook Savory Beef</h4><p>Marinate thinly sliced beef in soy sauce, sugar, garlic, and sesame oil, then stir-fry over high heat until browned.</p><h4>Step 3: Fry Egg and Mix Sauce</h4><p>Fry an egg sunny-side up. Whisk gochujang paste with honey, rice vinegar, sesame oil, and toasted sesame seeds.</p><h4>Step 4: Assemble Bowl</h4><p>Place warm steamed rice in a bowl, arrange beef and vegetables radially on top, crown with the egg, and serve with gochujang sauce.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Bibimbap",
+            preparation_time=25,
+            cooking_time=20,
+            difficulty_level="MEDIUM",
+            meal_categories=["LUNCH", "DINNER", "RICE", "MEAT", "TRADITIONAL"],
+            tags=["korean", "món hàn", "korea", "bibimbap", "cơm trộn hàn quốc", "gochujang"],
+            ingredients=[
+                ParsedIngredient(name_vi="Cơm trắng dẻo", name_en="Steamed short-grain rice", quantity=350.0, measure="g", note="warm", category="GRAINS"),
+                ParsedIngredient(name_vi="Thịt bò thăn thái mỏng", name_en="Thinly sliced beef sirloin", quantity=200.0, measure="g", note=None, category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Cải bó xôi", name_en="Spinach", quantity=120.0, measure="g", note=None, category="VEGETABLES"),
+                ParsedIngredient(name_vi="Cà rốt và bí ngòi", name_en="Carrot and zucchini", quantity=200.0, measure="g", note="julienned", category="VEGETABLES"),
+                ParsedIngredient(name_vi="Tương ớt Gochujang", name_en="Gochujang chili paste", quantity=45.0, measure="g", note=None, category="CONDIMENTS AND SAUCES"),
+                ParsedIngredient(name_vi="Dầu mè", name_en="Sesame oil", quantity=20.0, measure="ml", note=None, category="FATS AND OILS"),
+                ParsedIngredient(name_vi="Trứng gà", name_en="Egg", quantity=2.0, measure="piece", note="sunny-side up", category="PROTEIN FOODS"),
+            ]
+        ),
+        RecipeExtraction(
+            title_vi="Bò hầm rượu vang kiểu Pháp",
+            title_en="Beef Bourguignon",
+            short_desc_vi="Thịt bò hầm chậm trong rượu vang đỏ Burgundy cùng thịt xông khói, cà rốt, nấm mỡ và thảo mộc thơm nồng đậm đà.",
+            short_desc_en="Classic French slow-braised beef stew simmered in rich red Burgundy wine with bacon lardons, carrots, pearl onions, and mushrooms.",
+            content_vi="<h4>Bước 1: Áp chảo thịt xông khói và bò</h4><p>Áp chảo thịt ba rọi xông khói cho ra mỡ rồi vớt ra. Thấm khô thịt bò cắt khối, áp chảo vàng đều các mặt trong phần mỡ đó.</p><h4>Bước 2: Xào rau củ thơm</h4><p>Cho cà rốt, hành tây, tỏi và sốt cà chua cô đặc vào nồi đảo đều, rắc thêm chút bột mì để tạo độ sánh.</p><h4>Bước 3: Hầm rượu vang</h4><p>Đổ rượu vang đỏ và nước dùng bò ngập thịt, thêm lá nguyệt quế và cỏ xạ hương. Đậy nắp hầm nhỏ lửa trong 2 đến 2,5 tiếng cho thịt mềm tan.</p><h4>Bước 4: Thêm nấm và hoàn tất</h4><p>Xào vàng nấm mỡ với bơ rồi cho vào nồi hầm trong 15 phút cuối. Nêm lại muối tiêu và rắc ngò tây trước khi dùng.</p>",
+            content_en="<h4>Step 1: Brown Bacon and Beef</h4><p>Crisp bacon lardons in a Dutch oven and set aside. Pat beef chuck cubes dry and sear in batches until deeply browned.</p><h4>Step 2: Sauté Aromatics</h4><p>Cook carrots, onions, garlic, and tomato paste in the pot, then dust lightly with flour to thicken the base.</p><h4>Step 3: Braise in Red Wine</h4><p>Pour in red Burgundy wine and beef stock to cover the meat, add thyme and bay leaf, cover, and braise gently for 2 to 2.5 hours until fork-tender.</p><h4>Step 4: Fold in Mushrooms</h4><p>Sauté quartered mushrooms in butter and fold into the stew for the last 15 minutes. Garnish with chopped parsley.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Beef_bourguignon",
+            preparation_time=30,
+            cooking_time=150,
+            difficulty_level="HARD",
+            meal_categories=["DINNER", "MEAT", "TRADITIONAL"],
+            tags=["french", "món pháp", "france", "beef bourguignon", "bò hầm rượu vang", "stew"],
+            ingredients=[
+                ParsedIngredient(name_vi="Thịt bắp hoặc nạm bò", name_en="Beef chuck", quantity=800.0, measure="g", note="cut into 4cm cubes", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Rượu vang đỏ", name_en="Dry red wine", quantity=500.0, measure="ml", note="Burgundy or Pinot Noir", category="OTHER"),
+                ParsedIngredient(name_vi="Thịt ba rọi xông khói", name_en="Bacon lardons", quantity=150.0, measure="g", note="diced", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Nấm mỡ", name_en="Cremini mushrooms", quantity=250.0, measure="g", note="quartered", category="VEGETABLES"),
+                ParsedIngredient(name_vi="Cà rốt", name_en="Carrots", quantity=200.0, measure="g", note="chunked", category="VEGETABLES"),
+                ParsedIngredient(name_vi="Bơ lạt", name_en="Butter", quantity=30.0, measure="g", note=None, category="MILK AND DAIRY"),
+                ParsedIngredient(name_vi="Cỏ xạ hương và lá nguyệt quế", name_en="Thyme and bay leaves", quantity=5.0, measure="g", note=None, category="HERBS AND SPICES"),
+            ]
+        ),
+        RecipeExtraction(
+            title_vi="Moussaka cà tím nướng kiểu Hy Lạp",
+            title_en="Greek Moussaka",
+            short_desc_vi="Món đút lò truyền thống của Hy Lạp xếp lớp cà tím nướng, thịt cừu hoặc bò hầm sốt cà chua quế thơm và lớp sốt kem béchamel béo vàng.",
+            short_desc_en="Traditional Greek layered casserole of roasted eggplant, spiced meat and tomato ragu, and a rich golden béchamel topping.",
+            content_vi="<h4>Bước 1: Nướng cà tím</h4><p>Cắt lát cà tím dày 1cm, rắc muối để ráo bớt nước đắng, phết dầu ô liu rồi nướng vàng hai mặt.</p><h4>Bước 2: Nấu sốt thịt</h4><p>Xào hành tỏi và thịt băm với cà chua nghiền, chút quế, oregano và rượu vang trắng đến khi sốt sánh đậm đà.</p><h4>Bước 3: Làm sốt kem Béchamel</h4><p>Đun chảy bơ với bột mì, từ từ rót sữa ấm khuấy đều đến khi sệt mịn, tắt bếp rồi khuấy thêm lòng đỏ trứng, nhục đậu khấu và phô mai bào.</p><h4>Bước 4: Xếp lớp và nướng</h4><p>Xếp lớp cà tím, sốt thịt, cà tím và phủ sốt béchamel lên trên cùng. Nướng ở 180°C khoảng 40 phút đến khi mặt bánh vàng ruộm.</p>",
+            content_en="<h4>Step 1: Roast Eggplant</h4><p>Slice eggplant into 1 cm rounds, salt lightly to draw out moisture, pat dry, brush with olive oil, and roast until tender and golden.</p><h4>Step 2: Simmer Meat Ragu</h4><p>Brown ground lamb or beef with onions and garlic, add crushed tomatoes, cinnamon, and oregano, and simmer until thick.</p><h4>Step 3: Whisk Béchamel</h4><p>Cook butter and flour into a roux, slowly whisk in warm milk until thick, then fold in egg yolks, grated cheese, and nutmeg off the heat.</p><h4>Step 4: Layer and Bake</h4><p>Layer roasted eggplant and meat sauce in a baking dish, pour béchamel over the top, and bake at 180°C for 40 minutes until golden and bubbling.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Moussaka",
+            preparation_time=40,
+            cooking_time=50,
+            difficulty_level="HARD",
+            meal_categories=["LUNCH", "DINNER", "BAKED", "MEAT", "TRADITIONAL"],
+            tags=["greek", "mediterranean", "món hy lạp", "greece", "moussaka", "eggplant"],
+            ingredients=[
+                ParsedIngredient(name_vi="Cà tím", name_en="Eggplant", quantity=700.0, measure="g", note="sliced into rounds", category="VEGETABLES"),
+                ParsedIngredient(name_vi="Thịt cừu hoặc thịt bò băm", name_en="Ground lamb or beef", quantity=500.0, measure="g", note=None, category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Cà chua nghiền", name_en="Crushed tomatoes", quantity=400.0, measure="g", note=None, category="VEGETABLES"),
+                ParsedIngredient(name_vi="Sữa tươi nguyên kem", name_en="Whole milk", quantity=500.0, measure="ml", note="for béchamel", category="MILK AND DAIRY"),
+                ParsedIngredient(name_vi="Bơ lạt", name_en="Unsalted butter", quantity=50.0, measure="g", note=None, category="MILK AND DAIRY"),
+                ParsedIngredient(name_vi="Dầu ô liu", name_en="Olive oil", quantity=45.0, measure="ml", note=None, category="FATS AND OILS"),
+                ParsedIngredient(name_vi="Bột quế và oregano", name_en="Ground cinnamon and oregano", quantity=8.0, measure="g", note=None, category="HERBS AND SPICES"),
+            ]
+        ),
+        RecipeExtraction(
+            title_vi="Trứng chần sốt cà chua Shakshuka",
+            title_en="Shakshuka",
+            short_desc_vi="Món ăn sáng phổ biến khắp Trung Đông và Bắc Phi với trứng chần chín tới trong chảo sốt cà chua, ớt chuông, thì là và ớt paprika cay ấm.",
+            short_desc_en="Beloved Middle Eastern and North African skillet dish of eggs poached directly in a spiced, fragrant tomato and bell pepper sauce.",
+            content_vi="<h4>Bước 1: Xào rau củ và gia vị</h4><p>Đun nóng dầu ô liu, xào mềm hành tây và ớt chuông đỏ thái hạt lựu. Thêm tỏi, bột thì là Ai Cập, paprika và bột ớt đảo thơm.</p><h4>Bước 2: Ninh sốt cà chua</h4><p>Đổ cà chua băm hoặc cà chua đóng hộp vào chảo, nêm muối tiêu và đun nhỏ lửa khoảng 10-12 phút cho sốt sánh lại.</p><h4>Bước 3: Chần trứng trong sốt</h4><p>Tạo các hốc nhỏ trên mặt sốt rồi đập từng quả trứng vào. Đậy nắp đun lửa nhỏ 5-7 phút đến khi lòng trắng chín nhưng lòng đào vẫn dẻo mềm.</p><h4>Bước 4: Hoàn thành</h4><p>Rắc ngò rí, ngò tây và chút phô mai feta nếu thích, ăn nóng kèm bánh mì nướng giòn.</p>",
+            content_en="<h4>Step 1: Sauté Peppers and Spices</h4><p>Heat olive oil in a skillet and sauté diced onion and red bell pepper until soft. Stir in minced garlic, cumin, smoked paprika, and chili flakes.</p><h4>Step 2: Simmer Tomato Sauce</h4><p>Pour in crushed or diced tomatoes, season with salt and pepper, and simmer for 10-12 minutes until thickened.</p><h4>Step 3: Poach Eggs</h4><p>Make small wells in the sauce and crack an egg into each. Cover and simmer gently for 5-7 minutes until egg whites set and yolks remain runny.</p><h4>Step 4: Garnish</h4><p>Top with fresh cilantro or parsley and crumbled feta if desired. Serve straight from the skillet with crusty bread.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Shakshouka",
+            preparation_time=10,
+            cooking_time=20,
+            difficulty_level="EASY",
+            meal_categories=["BREAKFAST", "LUNCH", "DINNER", "VEGETARIAN", "TRADITIONAL"],
+            tags=["middle eastern", "north african", "shakshuka", "món trung đông", "vegetarian", "eggs"],
+            ingredients=[
+                ParsedIngredient(name_vi="Trứng gà", name_en="Eggs", quantity=4.0, measure="piece", note=None, category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Cà chua băm nhuyễn", name_en="Crushed tomatoes", quantity=400.0, measure="g", note=None, category="VEGETABLES"),
+                ParsedIngredient(name_vi="Ớt chuông đỏ", name_en="Red bell pepper", quantity=1.0, measure="piece", note="diced", category="VEGETABLES"),
+                ParsedIngredient(name_vi="Hành tây", name_en="Onion", quantity=1.0, measure="piece", note="diced", category="VEGETABLES"),
+                ParsedIngredient(name_vi="Dầu ô liu", name_en="Olive oil", quantity=30.0, measure="ml", note=None, category="FATS AND OILS"),
+                ParsedIngredient(name_vi="Bột thì là và Paprika", name_en="Ground cumin and paprika", quantity=10.0, measure="g", note=None, category="HERBS AND SPICES"),
+                ParsedIngredient(name_vi="Ngò rí", name_en="Fresh cilantro", quantity=20.0, measure="g", note="chopped", category="HERBS AND SPICES"),
+            ]
+        ),
+        RecipeExtraction(
+            title_vi="Cơm hải sản Paella Tây Ban Nha",
+            title_en="Seafood Paella",
+            short_desc_vi="Món cơm chảo vàng óng nghệ tây saffron đặc sản Valencia, thấm đẫm nước dùng hải sản cùng tôm, vẹm xanh và mực tươi.",
+            short_desc_en="Iconic Spanish saffron rice cooked in a wide shallow pan with rich seafood stock, plump shrimp, mussels, and tender squid.",
+            content_vi="<h4>Bước 1: Chuẩn bị nền sofrito</h4><p>Xào mềm hành tây, tỏi, ớt chuông và cà chua băm với dầu ô liu và bột ớt hun khói Tây Ban Nha đến khi sánh lại.</p><h4>Bước 2: Xào gạo và ủ nghệ tây</h4><p>Cho gạo hạt tròn Bomba vào đảo đều cho thấm dầu. Hòa nhụy hoa nghệ tây saffron vào nước dùng hải sản nóng rồi chan đều vào chảo.</p><h4>Bước 3: Nấu cơm không khuấy</h4><p>Dàn đều gạo và nấu lửa vừa khoảng 15 phút mà không khuấy để hình thành lớp cơm cháy giòn socarrat ở đáy chảo.</p><h4>Bước 4: Thêm hải sản</h4><p>Xếp tôm, vẹm xanh và mực lên mặt cơm, nấu thêm 6-8 phút đến khi hải sản chín và vẹm mở vỏ. Trang trí chanh vàng và ngò tây.</p>",
+            content_en="<h4>Step 1: Build the Sofrito</h4><p>Sauté onion, garlic, bell pepper, and grated tomato in olive oil with smoked paprika until thick and aromatic.</p><h4>Step 2: Toast Rice and Add Saffron Stock</h4><p>Stir in Spanish short-grain rice to coat with the sofrito. Infuse saffron threads into hot seafood stock and pour evenly over the rice.</p><h4>Step 3: Simmer Without Stirring</h4><p>Cook undisturbed over medium heat for about 15 minutes so the rice absorbs the broth and forms a crisp socarrat crust underneath.</p><h4>Step 4: Cook Seafood</h4><p>Nestle shrimp, mussels, and squid rings on top of the rice, cover loosely or cook 6-8 minutes until mussels open and shrimp turn pink. Serve with lemon wedges.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Paella",
             preparation_time=20,
             cooking_time=30,
-            difficulty_level="EASY",
-            meal_categories=["LUNCH", "DINNER", "MEAT", "TRADITIONAL"],
-            tags=["sườn xào chua ngọt", "sườn non", "món xào", "cơm gia đình", "sweet and sour ribs"],
+            difficulty_level="MEDIUM",
+            meal_categories=["LUNCH", "DINNER", "RICE", "SEAFOOD", "TRADITIONAL"],
+            tags=["spanish", "món tây ban nha", "spain", "paella", "seafood", "cơm hải sản"],
             ingredients=[
-                ParsedIngredient(name_vi="Sườn non", name_en="Pork ribs", quantity=500.0, measure="g", note="chọn sườn non nhiều nạc", category="PROTEIN FOODS"),
-                ParsedIngredient(name_vi="Giấm gạo", name_en="Rice vinegar", quantity=30.0, measure="ml", note=None, category="CONDIMENTS AND SAUCES"),
-                ParsedIngredient(name_vi="Đường cát", name_en="Sugar", quantity=30.0, measure="g", note=None, category="SUGARS"),
-                ParsedIngredient(name_vi="Tương cà", name_en="Ketchup", quantity=30.0, measure="g", note="tạo màu và độ sánh", category="CONDIMENTS AND SAUCES"),
-                ParsedIngredient(name_vi="Nước mắm", name_en="Fish sauce", quantity=30.0, measure="ml", note=None, category="CONDIMENTS AND SAUCES"),
-                ParsedIngredient(name_vi="Tỏi", name_en="Garlic", quantity=3.0, measure="nhánh", note="băm nhỏ", category="HERBS AND SPICES")
+                ParsedIngredient(name_vi="Gạo hạt ngắn Tây Ban Nha", name_en="Bomba or short-grain rice", quantity=300.0, measure="g", note=None, category="GRAINS"),
+                ParsedIngredient(name_vi="Tôm sú", name_en="Large shrimp", quantity=250.0, measure="g", note="shell-on or peeled", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Vẹm xanh", name_en="Mussels", quantity=300.0, measure="g", note="scrubbed and debearded", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Mực ống cắt khoanh", name_en="Squid rings", quantity=200.0, measure="g", note=None, category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Nhụy hoa nghệ tây Saffron", name_en="Saffron threads", quantity=1.0, measure="g", note="steeped in warm stock", category="HERBS AND SPICES"),
+                ParsedIngredient(name_vi="Dầu ô liu", name_en="Olive oil", quantity=45.0, measure="ml", note=None, category="FATS AND OILS"),
+                ParsedIngredient(name_vi="Chanh vàng", name_en="Lemon", quantity=1.0, measure="piece", note="cut into wedges", category="FRUIT"),
             ]
         ),
         RecipeExtraction(
-            title_vi="Bò xào cần tỏi",
-            title_en="Stir-fried Beef with Celery and Garlic",
-            short_desc_vi="Thịt bò xào mềm thơm ngậy, cần tây và hành tây giữ trọn độ giòn ngọt, thoang thoảng mùi tiêu ấm nồng.",
-            short_desc_en="Quick stir-fried tender beef with crisp celery, onions, and fragrant garlic.",
-            content_vi="<h4>Bước 1: Ướp thịt bò</h4><p>Thịt bò thái mỏng ngang thớ. Ướp với 1 muỗng dầu hào, tỏi băm, 1/2 muỗng dầu ăn và chút tiêu trong 15 phút cho thịt mềm.</p><h4>Bước 2: Sơ chế rau củ</h4><p>Cần tây cắt khúc. Hành tây bổ múi cau. Cà chua cắt múi cau.</p><h4>Bước 3: Xào thịt</h4><p>Làm nóng chảo với lửa lớn, cho tỏi băm phi thơm rồi trút thịt bò vào đảo nhanh tay trong 1-2 phút cho thịt vừa chín tới thì trút ra đĩa riêng.</p><h4>Bước 4: Hoàn thành</h4><p>Dùng chảo đó xào hành tây, cà chua và cần tây chín tới. Đổ thịt bò vào đảo đều trong 30 giây, nêm nếm lại cho vừa miệng rồi tắt bếp. Rắc tiêu xay và dùng nóng.</p>",
-            content_en="<h4>Step 1: Marinate Beef</h4><p>Slice beef thinly against the grain. Marinate with oyster sauce, minced garlic, a splash of oil, and pepper for 15 minutes.</p><h4>Step 2: Veggie Prep</h4><p>Cut celery into finger-length pieces. Wedge onions and tomatoes.</p><h4>Step 3: Sear Beef</h4><p>Heat wok over high heat with oil and garlic. Add beef and stir-fry vigorously for 1-2 minutes until just cooked. Transfer to a plate.</p><h4>Step 4: Stir-fry and Combine</h4><p>In the same wok, toss onion, tomato, and celery until tender-crisp. Return beef to wok, toss for 30 seconds, garnish with black pepper, and serve hot.</p>",
-            thumbnail="https://cdn.tgdd.vn/Files/2021/08/21/1376884/cach-lam-thit-bo-xao-can-tay-thom-ngon-thit-bo-mem-khong-dai-202108211520112423.jpg",
-            source_url="https://www.dienmayxanh.com/vao-bep/cach-lam-thit-bo-xao-can-tay-mem-ngon-00345",
-            preparation_time=15,
-            cooking_time=10,
-            difficulty_level="EASY",
+            title_vi="Gà hầm Tagine kiểu Ma-rốc",
+            title_en="Moroccan Chicken Tagine",
+            short_desc_vi="Thịt gà hầm mềm trong nồi đất cùng chanh muối, ô liu xanh, nghệ tây, gừng và mật ong mang hương vị Bắc Phi quyến rũ.",
+            short_desc_en="Fragrant North African braised chicken stewed with preserved lemon, green olives, warm spices, and sweet caramelized onions.",
+            content_vi="<h4>Bước 1: Ướp và áp chảo gà</h4><p>Trộn đùi gà với gừng, nghệ, bột thì là, quế, tỏi băm và dầu ô liu rồi áp chảo vàng đều hai mặt.</p><h4>Bước 2: Xào hành và gia vị</h4><p>Cho hành tây thái lát vào nồi đảo mềm với nghệ tây và nước dùng gà.</p><h4>Bước 3: Hầm trong nồi Tagine</h4><p>Đặt gà trở lại nồi, đậy nắp hầm nhỏ lửa khoảng 35-40 phút đến khi thịt gà mềm nhừ và nước sốt sánh lại.</p><h4>Bước 4: Thêm ô liu và chanh muối</h4><p>Cho ô liu xanh và vỏ chanh muối thái lát vào đun thêm 5 phút. Rắc ngò rí và hạnh nhân rang lên trên, ăn kèm couscous.</p>",
+            content_en="<h4>Step 1: Brown Spiced Chicken</h4><p>Coat chicken thighs with ground ginger, turmeric, cumin, cinnamon, garlic, and olive oil, then sear until golden brown.</p><h4>Step 2: Soften Onions</h4><p>Sauté sliced onions in the same pot until translucent and fragrant, then pour in chicken broth infused with saffron.</p><h4>Step 3: Slow Simmer</h4><p>Return chicken to the tagine or Dutch oven, cover, and simmer gently for 35-40 minutes until tender and flavorful.</p><h4>Step 4: Finish with Olives and Preserved Lemon</h4><p>Stir in pitted green olives and sliced preserved lemon peel for the last 5 minutes. Garnish with cilantro and toasted almonds, and serve with couscous.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Tajine",
+            preparation_time=20,
+            cooking_time=45,
+            difficulty_level="MEDIUM",
             meal_categories=["LUNCH", "DINNER", "MEAT", "TRADITIONAL"],
-            tags=["bò xào cần tỏi", "thịt bò", "cần tây", "món xào", "stir fried beef"],
+            tags=["moroccan", "north african", "món ma-rốc", "morocco", "tagine", "chicken"],
             ingredients=[
-                ParsedIngredient(name_vi="Thịt bò thăn", name_en="Beef tenderloin", quantity=300.0, measure="g", note="thái mỏng ngang thớ", category="PROTEIN FOODS"),
-                ParsedIngredient(name_vi="Cần tây", name_en="Celery", quantity=150.0, measure="g", note="rửa sạch cắt khúc", category="VEGETABLES"),
-                ParsedIngredient(name_vi="Hành tây", name_en="Onion", quantity=1.0, measure="củ", note="bổ múi cau", category="VEGETABLES"),
-                ParsedIngredient(name_vi="Cà chua", name_en="Tomato", quantity=1.0, measure="quả", note="bổ múi cau", category="VEGETABLES"),
-                ParsedIngredient(name_vi="Dầu hào", name_en="Oyster sauce", quantity=15.0, measure="ml", note=None, category="CONDIMENTS AND SAUCES"),
-                ParsedIngredient(name_vi="Tỏi", name_en="Garlic", quantity=4.0, measure="nhánh", note="băm nhỏ", category="HERBS AND SPICES"),
-                ParsedIngredient(name_vi="Tiêu xay", name_en="Black pepper", quantity=3.0, measure="g", note=None, category="HERBS AND SPICES")
+                ParsedIngredient(name_vi="Đùi gà có xương", name_en="Bone-in chicken thighs", quantity=700.0, measure="g", note=None, category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Chanh muối Ma-rốc", name_en="Preserved lemon", quantity=1.0, measure="piece", note="rind thinly sliced", category="FRUIT"),
+                ParsedIngredient(name_vi="Quả ô liu xanh", name_en="Green olives", quantity=100.0, measure="g", note="pitted", category="FRUIT"),
+                ParsedIngredient(name_vi="Hành tây", name_en="Yellow onion", quantity=2.0, measure="piece", note="sliced", category="VEGETABLES"),
+                ParsedIngredient(name_vi="Hạnh nhân lát rang", name_en="Toasted sliced almonds", quantity=30.0, measure="g", note="for garnish", category="NUTS AND SEEDS"),
+                ParsedIngredient(name_vi="Nghệ, gừng và quế", name_en="Turmeric, ginger, and cinnamon", quantity=12.0, measure="g", note=None, category="HERBS AND SPICES"),
+                ParsedIngredient(name_vi="Dầu ô liu", name_en="Olive oil", quantity=30.0, measure="ml", note=None, category="FATS AND OILS"),
             ]
         ),
         RecipeExtraction(
-            title_vi="Tóp mỡ sốt cà chua",
-            title_en="Crispy Pork Fat in Tomato Sauce",
-            short_desc_vi="Tóp mỡ giòn rụm ngấm đều sốt cà chua sánh mịn chua ngọt, món ăn dân dã siêu tốn cơm của người Việt.",
-            short_desc_en="Crispy pork cracklings simmered in a luscious sweet-and-sour fresh tomato sauce.",
-            content_vi="<h4>Bước 1: Chuẩn bị tóp mỡ</h4><p>Mỡ heo cắt hạt lựu, rán vàng giòn ép kiệt mỡ nước, vớt tóp mỡ ra để ráo giòn.</p><h4>Bước 2: Nấu sốt cà chua</h4><p>Cà chua băm nhỏ. Phi thơm hành tím trong chảo, cho cà chua vào đảo nhuyễn mịn với 1 muỗng nước mắm, 1 muỗng đường, 1/2 muỗng bột canh.</p><h4>Bước 3: Rim tóp mỡ</h4><p>Khi sốt cà chua sánh sệt, trút toàn bộ tóp mỡ vào chảo đảo nhanh tay trên lửa vừa khoảng 2 phút để tóp mỡ vừa ngấm sốt mà vẫn giữ được độ giòn xốp.</p><h4>Bước 4: Hoàn thành</h4><p>Rắc hành lá thái nhỏ và chút tiêu xay lên trên, tắt bếp và ăn ngay với cơm nóng.</p>",
-            content_en="<h4>Step 1: Pork Cracklings</h4><p>Dice pork fat, fry until crispy golden and fat is rendered out, then drain.</p><h4>Step 2: Tomato Sauce</h4><p>Finely chop tomatoes. Sauté shallots, add tomatoes, fish sauce, and sugar, cooking down into a thick sauce.</p><h4>Step 3: Toss Cracklings</h4><p>Pour cracklings into the bubbling tomato sauce, toss rapidly for 2 minutes so they absorb the tangy flavor while staying crispy.</p><h4>Step 4: Garnish</h4><p>Top with chopped scallions and black pepper. Serve immediately with warm rice.</p>",
-            thumbnail="https://cdn.tgdd.vn/Files/2021/09/06/1380590/cach-lam-top-mo-sot-ca-chua-gion-rum-thom-ngon-dam-da-202109061618218152.jpg",
-            source_url="https://www.dienmayxanh.com/vao-bep/cach-lam-top-mo-sot-ca-chua-gion-ngon-00999",
+            title_vi="Đậu phụ Tứ Xuyên Mapo",
+            title_en="Sichuan Mapo Tofu",
+            short_desc_vi="Đậu phụ non mềm mượt hòa quyện cùng thịt băm, tương đậu cay Tứ Xuyên Doubanjiang và hạt tiêu hoa Tứ Xuyên tê nồng.",
+            short_desc_en="Silky soft tofu braised in a fiery, umami-packed Sichuan chili bean sauce with minced pork and numbing Sichuan peppercorns.",
+            content_vi="<h4>Bước 1: Sơ chế đậu phụ</h4><p>Cắt đậu phụ non thành khối vuông 2cm, chần nhẹ qua nước sôi pha chút muối rồi vớt ra để ráo giúp đậu không bị nát.</p><h4>Bước 2: Xào thịt và tương đậu cay</h4><p>Xào tơi thịt heo băm với gừng, tỏi băm và gốc hành lá. Thêm tương đậu cay Tứ Xuyên Doubanjiang và đậu đen lên men đảo đều đến khi lên màu đỏ đẹp.</p><h4>Bước 3: Om đậu phụ</h4><p>Đổ nước dùng gà và chút nước tương vào đun sôi, nhẹ nhàng thả đậu phụ vào om 5 phút để thấm gia vị.</p><h4>Bước 4: Tạo độ sánh</h4><p>Hòa tan bột bắp với nước rồi rưới từ từ vào chảo để sốt sánh bóng. Rắc bột hoa tiêu Tứ Xuyên và hành lá lên trên, ăn nóng với cơm trắng.</p>",
+            content_en="<h4>Step 1: Blanch Tofu</h4><p>Cut soft tofu into 2 cm cubes and gently simmer in lightly salted water for 2 minutes, then drain to keep cubes intact.</p><h4>Step 2: Brown Pork and Chili Bean Paste</h4><p>Stir-fry minced pork until crisp, then add ginger, garlic, scallions, Sichuan doubanjiang paste, and fermented black beans until fragrant and red.</p><h4>Step 3: Braise Tofu</h4><p>Add stock and soy sauce, bring to a simmer, and gently slide in the tofu cubes. Simmer for 5 minutes.</p><h4>Step 4: Thicken and Finish</h4><p>Stir in a cornstarch slurry until the sauce turns glossy. Sprinkle freshly ground Sichuan peppercorns and green onions on top, and serve with steamed rice.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Mapo_tofu",
             preparation_time=15,
             cooking_time=15,
             difficulty_level="EASY",
-            meal_categories=["FRIED", "LUNCH", "DINNER", "TRADITIONAL"],
-            tags=["tóp mỡ", "sốt cà chua", "món chiên", "dân dã", "pork cracklings"],
+            meal_categories=["LUNCH", "DINNER", "MEAT", "TRADITIONAL"],
+            tags=["chinese", "sichuan", "món trung hoa", "china", "mapo tofu", "đậu phụ tứ xuyên"],
             ingredients=[
-                ParsedIngredient(name_vi="Tóp mỡ", name_en="Pork cracklings", quantity=250.0, measure="g", note="đã chiên giòn", category="PROTEIN FOODS"),
-                ParsedIngredient(name_vi="Cà chua", name_en="Tomatoes", quantity=3.0, measure="quả", note="chín đỏ băm nhỏ", category="VEGETABLES"),
-                ParsedIngredient(name_vi="Hành tím", name_en="Shallots", quantity=2.0, measure="củ", note="băm nhỏ", category="HERBS AND SPICES"),
-                ParsedIngredient(name_vi="Hành lá", name_en="Scallions", quantity=3.0, measure="nhánh", note="thái nhỏ", category="VEGETABLES"),
-                ParsedIngredient(name_vi="Nước mắm", name_en="Fish sauce", quantity=20.0, measure="ml", note=None, category="CONDIMENTS AND SAUCES"),
-                ParsedIngredient(name_vi="Đường", name_en="Sugar", quantity=15.0, measure="g", note=None, category="SUGARS")
+                ParsedIngredient(name_vi="Đậu phụ non", name_en="Soft tofu", quantity=400.0, measure="g", note="cubed", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Thịt heo băm", name_en="Ground pork", quantity=150.0, measure="g", note=None, category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Tương đậu cay Tứ Xuyên", name_en="Doubanjiang chili bean paste", quantity=35.0, measure="g", note=None, category="CONDIMENTS AND SAUCES"),
+                ParsedIngredient(name_vi="Hoa tiêu Tứ Xuyên", name_en="Sichuan peppercorns", quantity=5.0, measure="g", note="toasted and ground", category="HERBS AND SPICES"),
+                ParsedIngredient(name_vi="Nước tương", name_en="Soy sauce", quantity=15.0, measure="ml", note=None, category="CONDIMENTS AND SAUCES"),
+                ParsedIngredient(name_vi="Bột bắp", name_en="Cornstarch", quantity=10.0, measure="g", note="mixed with water", category="GRAINS"),
+                ParsedIngredient(name_vi="Hành lá và tỏi", name_en="Scallions and garlic", quantity=40.0, measure="g", note="chopped", category="VEGETABLES"),
             ]
-        )
+        ),
+        RecipeExtraction(
+            title_vi="Thịt hầm đậu đen Feijoada Brazil",
+            title_en="Brazilian Feijoada",
+            short_desc_vi="Món hầm quốc hồn quốc túy của Brazil kết hợp đậu đen ninh nhừ cùng thịt heo muối, xúc xích hun khói và hương lá nguyệt quế đậm đà.",
+            short_desc_en="Brazil's hearty national black bean stew slow-simmered with smoked sausage, pork shoulder, garlic, and bay leaves.",
+            content_vi="<h4>Bước 1: Ngâm đậu đen</h4><p>Rửa sạch đậu đen và ngâm nước qua đêm hoặc ít nhất 6 tiếng cho đậu nở đều.</p><h4>Bước 2: Áp chảo thịt và xúc xích</h4><p>Áp chảo vàng thịt vai heo cắt khối và xúc xích hun khói chorizo cắt lát, sau đó xào thơm hành tây và tỏi băm.</p><h4>Bước 3: Ninh đậu với thịt</h4><p>Cho đậu đen đã ngâm, các loại thịt, lá nguyệt quế và nước vào nồi lớn, đun sôi rồi hạ nhỏ lửa ninh khoảng 1,5 - 2 tiếng đến khi đậu mềm và nước sánh.</p><h4>Bước 4: Phục vụ</h4><p>Nêm muối tiêu vừa ăn, múc ra tô dùng nóng cùng cơm trắng, cải xanh xào tỏi và vài lát cam tươi.</p>",
+            content_en="<h4>Step 1: Soak Black Beans</h4><p>Rinse dried black beans and soak overnight in plenty of cold water, then drain.</p><h4>Step 2: Brown Meats and Aromatics</h4><p>Sear cubed pork shoulder and sliced smoked sausage in a large pot until browned, then sauté chopped onion and minced garlic.</p><h4>Step 3: Slow Simmer</h4><p>Add soaked black beans, bay leaves, and water to cover. Simmer gently for 1.5 to 2 hours until the beans are tender and the broth is rich and creamy.</p><h4>Step 4: Serve</h4><p>Season to taste and serve hot over steamed rice alongside sautéed collard greens and fresh orange slices.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Feijoada",
+            preparation_time=25,
+            cooking_time=120,
+            difficulty_level="MEDIUM",
+            meal_categories=["LUNCH", "DINNER", "MEAT", "TRADITIONAL"],
+            tags=["brazilian", "latin american", "món brazil", "brazil", "feijoada", "black bean stew"],
+            ingredients=[
+                ParsedIngredient(name_vi="Đậu đen khô", name_en="Dried black beans", quantity=450.0, measure="g", note="soaked overnight", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Thịt nạc vai heo", name_en="Pork shoulder", quantity=400.0, measure="g", note="cubed", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Xúc xích hun khói", name_en="Smoked sausage", quantity=250.0, measure="g", note="sliced", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Hành tây", name_en="Onion", quantity=1.0, measure="piece", note="chopped", category="VEGETABLES"),
+                ParsedIngredient(name_vi="Tỏi", name_en="Garlic", quantity=6.0, measure="clove", note="minced", category="HERBS AND SPICES"),
+                ParsedIngredient(name_vi="Lá nguyệt quế", name_en="Bay leaves", quantity=3.0, measure="piece", note=None, category="HERBS AND SPICES"),
+                ParsedIngredient(name_vi="Cam tươi", name_en="Fresh orange", quantity=1.0, measure="piece", note="sliced for serving", category="FRUIT"),
+            ]
+        ),
+        RecipeExtraction(
+            title_vi="Phở bò truyền thống",
+            title_en="Traditional Vietnamese Beef Pho",
+            short_desc_vi="Nước dùng xương bò ninh nhiều giờ thơm nồng quế, hồi, thảo quả kết hợp bánh phở mềm dai, thịt bò tái chín và rau thơm.",
+            short_desc_en="Aromatic Vietnamese noodle soup featuring slow-simmered spiced beef bone broth, silky rice noodles, tender beef slices, and fresh herbs.",
+            content_vi="<h4>Bước 1: Ninh xương bò</h4><p>Chần sơ xương bò qua nước sôi rồi rửa sạch. Ninh xương nhỏ lửa khoảng 4 tiếng, thường xuyên vớt bọt để nước dùng trong ngọt.</p><h4>Bước 2: Nướng hành gừng và rang gia vị</h4><p>Nướng thơm hành tây và gừng già rồi cạo vỏ cho vào nồi nước dùng. Rang hoa hồi, quế thanh, thảo quả cho dậy mùi, bọc túi vải thả vào nồi.</p><h4>Bước 3: Trụng bánh phở và thịt bò</h4><p>Nêm nước dùng với nước mắm ngon, muối và chút đường phèn. Trụng bánh phở cho vào tô, xếp thịt nạm bò và thịt thăn bò thái mỏng lên trên.</p><h4>Bước 4: Hoàn thiện</h4><p>Chan nước dùng đang sôi sùng sục ngập mặt thịt, rắc hành lá, ngò rí và thưởng thức nóng cùng giá đỗ, rau quế và chanh ớt.</p>",
+            content_en="<h4>Step 1: Simmer Bone Broth</h4><p>Parboil beef bones for 5 minutes and rinse clean. Simmer gently in fresh water for 4 hours, skimming foam to keep the broth clear.</p><h4>Step 2: Char Aromatics and Toast Spices</h4><p>Char onion and ginger until fragrant, then add to the pot alongside toasted star anise, cinnamon stick, and black cardamom wrapped in spice cloth.</p><h4>Step 3: Assemble Bowls</h4><p>Season broth with fish sauce, salt, and rock sugar. Blanch flat rice noodles, place into bowls, and layer cooked brisket and thinly sliced raw beef sirloin on top.</p><h4>Step 4: Ladle Boiling Broth</h4><p>Pour piping hot broth over the beef to cook it gently. Garnish with scallions and cilantro, and serve with bean sprouts, Thai basil, and lime.</p>",
+            thumbnail=None,
+            source_url="https://en.wikipedia.org/wiki/Pho",
+            preparation_time=30,
+            cooking_time=240,
+            difficulty_level="HARD",
+            meal_categories=["BREAKFAST", "LUNCH", "DINNER", "SOUP", "NOODLE", "MEAT", "TRADITIONAL"],
+            tags=["vietnamese", "món việt", "vietnam", "pho", "phở bò", "beef noodle soup"],
+            ingredients=[
+                ParsedIngredient(name_vi="Xương ống bò", name_en="Beef marrow bones", quantity=1000.0, measure="g", note="parboiled", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Thịt thăn bò", name_en="Beef sirloin", quantity=300.0, measure="g", note="paper-thin slices", category="PROTEIN FOODS"),
+                ParsedIngredient(name_vi="Bánh phở tươi", name_en="Flat rice noodles", quantity=500.0, measure="g", note=None, category="GRAINS"),
+                ParsedIngredient(name_vi="Gừng tươi và hành tây", name_en="Fresh ginger and onion", quantity=200.0, measure="g", note="charred", category="VEGETABLES"),
+                ParsedIngredient(name_vi="Quế, hoa hồi và thảo quả", name_en="Cinnamon, star anise, and cardamom", quantity=20.0, measure="g", note="toasted", category="HERBS AND SPICES"),
+                ParsedIngredient(name_vi="Nước mắm", name_en="Fish sauce", quantity=45.0, measure="ml", note=None, category="CONDIMENTS AND SAUCES"),
+                ParsedIngredient(name_vi="Hành lá và rau quế", name_en="Scallions and Thai basil", quantity=50.0, measure="g", note="for garnish", category="HERBS AND SPICES"),
+            ]
+        ),
     ]
 
 # ==============================================================================
 # Database Ingestion Logic
 # ==============================================================================
-def get_or_create_ingredient(ing: ParsedIngredient, author_id: str = "system-crawler") -> str:
-    """Finds existing ingredient by slug or auto-creates it in Ingredients collection."""
-    slug = slugify(ing.name_vi)
-    if not slug:
-        slug = slugify(ing.name_en)
+def get_or_create_ingredient(ing: ParsedIngredient, author_id: str = "system-crawler") -> Tuple[str, str]:
+    """Finds existing ingredient by slug or title, or auto-creates it in Ingredients collection."""
+    en_slug = slugify(ing.name_en)
+    vi_slug = slugify(ing.name_vi)
+    slug = en_slug or vi_slug
+    candidate_slugs = [s for s in (en_slug, vi_slug) if s]
 
     now = datetime.now(timezone.utc)
 
-    existing = ingredients_col.find_one({"slug": slug, "deleted": False})
-    if existing:
-        return str(existing["_id"])
+    if candidate_slugs:
+        existing = ingredients_col.find_one({"slug": {"$in": candidate_slugs}, "deleted": False})
+        if existing:
+            return str(existing["_id"]), existing.get("slug") or slug
 
-    existing_by_title = ingredients_col.find_one({
-        "title.data": {"$regex": f"^{re.escape(ing.name_vi)}$", "$options": "i"},
-        "deleted": False
-    })
+    title_patterns = [
+        {"title.data": {"$regex": f"^{re.escape(name.strip())}$", "$options": "i"}}
+        for name in (ing.name_en, ing.name_vi)
+        if name and name.strip()
+    ]
+    existing_by_title = (
+        ingredients_col.find_one({"$or": title_patterns, "deleted": False})
+        if title_patterns else None
+    )
     if existing_by_title:
-        return str(existing_by_title["_id"])
+        return str(existing_by_title["_id"]), existing_by_title.get("slug") or slug
 
     new_doc = {
         "_id": ObjectId(),
@@ -393,12 +658,13 @@ def get_or_create_ingredient(ing: ParsedIngredient, author_id: str = "system-cra
         "updatedBy": author_id,
     }
     ingredients_col.insert_one(new_doc)
-    print(f"    [+] Auto-created Ingredient: {ing.name_vi} (slug: {slug})")
-    return str(new_doc["_id"])
+    print(f"    [+] Auto-created Ingredient: {ing.name_en} / {ing.name_vi} (slug: {slug})")
+    return str(new_doc["_id"]), slug
 
 def find_and_link_related_dishes(
     dish_id: ObjectId,
     dish_slug: str,
+    title_en: str,
     title_vi: str,
     meal_categories: List[str],
     tags: List[str],
@@ -430,16 +696,18 @@ def find_and_link_related_dishes(
                     if did not in seen_ids and doc.get("slug") != dish_slug:
                         matched_ids.append(did)
                         seen_ids.add(did)
-                        cand_title = next((t["data"] for t in doc.get("title", []) if t.get("lang") == "vi"), doc.get("slug"))
-                        print(f"      [+] Found in DB by tag '{tag}' -> {cand_title} (ID: {did})")
+                        print(f"      [+] Found in DB by tag '{tag}' -> {_extract_display_title(doc)} (ID: {did})")
                         if len(matched_ids) >= limit:
                             break
             except Exception:
                 pass
 
-    # Strategy 2: Match existing dishes by culinary keywords from title
+    # Strategy 2: Match existing dishes by culinary keywords from English and Vietnamese titles
     if len(matched_ids) < limit:
-        title_words = [w for w in slugify(title_vi).split('-') if len(w) > 2]
+        raw_words = slugify(title_en).split('-') + slugify(title_vi).split('-')
+        title_words = list(dict.fromkeys(
+            w for w in raw_words if len(w) > 2 and w not in STOPWORDS
+        ))
         for kw in title_words:
             if len(matched_ids) >= limit:
                 break
@@ -449,8 +717,7 @@ def find_and_link_related_dishes(
                     if did not in seen_ids and doc.get("slug") != dish_slug:
                         matched_ids.append(did)
                         seen_ids.add(did)
-                        cand_title = next((t["data"] for t in doc.get("title", []) if t.get("lang") == "vi"), doc.get("slug"))
-                        print(f"      [+] Found in DB by keyword '{kw}' -> {cand_title} (ID: {did})")
+                        print(f"      [+] Found in DB by keyword '{kw}' -> {_extract_display_title(doc)} (ID: {did})")
                         if len(matched_ids) >= limit:
                             break
             except Exception:
@@ -468,8 +735,7 @@ def find_and_link_related_dishes(
                     if did not in seen_ids and doc.get("slug") != dish_slug:
                         matched_ids.append(did)
                         seen_ids.add(did)
-                        cand_title = next((t["data"] for t in doc.get("title", []) if t.get("lang") == "vi"), doc.get("slug"))
-                        print(f"      [+] Found in DB by category '{cat}' -> {cand_title} (ID: {did})")
+                        print(f"      [+] Found in DB by category '{cat}' -> {_extract_display_title(doc)} (ID: {did})")
                         if len(matched_ids) >= limit:
                             break
             except Exception:
@@ -484,8 +750,7 @@ def find_and_link_related_dishes(
                 if did not in seen_ids and doc.get("slug") != dish_slug:
                     matched_ids.append(did)
                     seen_ids.add(did)
-                    cand_title = next((t["data"] for t in doc.get("title", []) if t.get("lang") == "vi"), doc.get("slug"))
-                    print(f"      [+] Found in DB by recent fallback -> {cand_title} (ID: {did})")
+                    print(f"      [+] Found in DB by recent fallback -> {_extract_display_title(doc)} (ID: {did})")
                     if len(matched_ids) >= limit:
                         break
         except Exception:
@@ -506,32 +771,36 @@ def find_and_link_related_dishes(
 
 def ingest_recipe(recipe: RecipeExtraction, author_id: str = "github-actions-crawler") -> bool:
     """Inserts the recipe document into MongoDB with sourceUrl, ingredients, and relatedDishes."""
-    dish_slug = slugify(recipe.title_vi)
+    en_slug = slugify(recipe.title_en)
+    vi_slug = slugify(recipe.title_vi)
+    dish_slug = en_slug or vi_slug
     if not dish_slug:
-        dish_slug = slugify(recipe.title_en)
+        print("  [WARN] Recipe produced an empty slug. Skipping.")
+        return False
 
-    existing = dishes_col.find_one({
-        "$or": [
-            {"slug": dish_slug},
-            {"sourceUrl": recipe.source_url}
-        ],
-        "deleted": False
-    })
+    candidate_slugs = list(dict.fromkeys(s for s in (en_slug, vi_slug) if s))
+    stripped_url = (recipe.source_url or "").strip()
+    or_conditions = [{"slug": {"$in": candidate_slugs}}]
+    # Only deduplicate on sourceUrl when it points to a specific path beyond the root domain
+    if re.match(r"^https?://[^/]+/.+", stripped_url):
+        or_conditions.append({"sourceUrl": stripped_url})
+
+    existing = dishes_col.find_one({"$or": or_conditions, "deleted": False})
     if existing:
         print(f"  [-] Dish already in database ('{dish_slug}'). Skipping duplicate.")
         return False
 
-    print(f"\n  [>] Ingesting Dish: {recipe.title_vi} ({recipe.title_en})")
+    print(f"\n  [>] Ingesting Dish: {recipe.title_en} / {recipe.title_vi}")
     print(f"      Source URL: {recipe.source_url}")
 
     new_dish_id = ObjectId()
 
     mapped_ingredients = []
     for ing in recipe.ingredients:
-        ing_id = get_or_create_ingredient(ing, author_id=author_id)
+        ing_id, ing_slug = get_or_create_ingredient(ing, author_id=author_id)
         mapped_ingredients.append({
             "ingredientId": ing_id,
-            "slug": slugify(ing.name_vi),
+            "slug": ing_slug,
             "quantity": ing.quantity,
             "note": ing.note
         })
@@ -540,6 +809,7 @@ def ingest_recipe(recipe: RecipeExtraction, author_id: str = "github-actions-cra
     related_dish_ids = find_and_link_related_dishes(
         dish_id=new_dish_id,
         dish_slug=dish_slug,
+        title_en=recipe.title_en,
         title_vi=recipe.title_vi,
         meal_categories=recipe.meal_categories,
         tags=recipe.tags,
@@ -583,7 +853,7 @@ def ingest_recipe(recipe: RecipeExtraction, author_id: str = "github-actions-cra
     }
 
     dishes_col.insert_one(dish_doc)
-    print(f"  [SUCCESS] Ingested '{recipe.title_vi}' (ID: {new_dish_id}) with {len(mapped_ingredients)} ingredients and {len(related_dish_ids)} related dishes linked.\n")
+    print(f"  [SUCCESS] Ingested '{recipe.title_en}' / '{recipe.title_vi}' (ID: {new_dish_id}) with {len(mapped_ingredients)} ingredients and {len(related_dish_ids)} related dishes linked.\n")
     return True
 
 # ==============================================================================
@@ -591,34 +861,46 @@ def ingest_recipe(recipe: RecipeExtraction, author_id: str = "github-actions-cra
 # ==============================================================================
 def main():
     print("=" * 60)
-    print("Starting Resilient What-To-Eat Recipe Ingestion Job")
+    print("Starting Resilient World Recipe Ingestion Job (what-to-eat)")
     print(f"Target limit: {DAILY_CRAWL_LIMIT} dishes")
-    print(f"Categories: {CRAWL_CATEGORIES}")
+    print(f"Configured cuisines/categories ({len(CRAWL_CATEGORIES)}): {CRAWL_CATEGORIES}")
     print("=" * 60)
 
     total_inserted = 0
+    categories_to_crawl = list(CRAWL_CATEGORIES)
+    random.shuffle(categories_to_crawl)
+    exclude_titles = get_existing_dish_titles(limit=80)
 
     # --------------------------------------------------------------------------
     # Step 1 & 2: Try AI Search Grounding, then Direct AI Generation
     # --------------------------------------------------------------------------
-    for category in CRAWL_CATEGORIES:
+    for idx, category in enumerate(categories_to_crawl):
         if total_inserted >= DAILY_CRAWL_LIMIT:
             break
 
         remaining = DAILY_CRAWL_LIMIT - total_inserted
-        fetch_count = min(remaining, 2)
+        remaining_cats = len(categories_to_crawl) - idx
+        fetch_count = min(remaining, max(1, math.ceil(remaining / remaining_cats)), 5)
         recipes = []
 
         # Attempt Tier 1: Search Grounding
         try:
-            recipes = discover_recipes_with_search_grounding(category, count=fetch_count)
+            recipes = discover_recipes_with_search_grounding(
+                category,
+                count=fetch_count,
+                exclude_titles=exclude_titles,
+            )
         except Exception as e_grounding:
             print(f"  [Notice] Tier 1 search grounding bypassed ({e_grounding})")
 
         # If Tier 1 failed or returned 0, fallback to Tier 2: Direct AI
         if not recipes and ai_client:
             try:
-                recipes = discover_recipes_direct_ai(category, count=fetch_count)
+                recipes = discover_recipes_direct_ai(
+                    category,
+                    count=fetch_count,
+                    exclude_titles=exclude_titles,
+                )
             except Exception as e_direct:
                 print(f"  [Notice] Tier 2 direct AI bypassed ({e_direct})")
 
@@ -628,14 +910,18 @@ def main():
                 break
             if ingest_recipe(recipe):
                 total_inserted += 1
+                new_title = recipe.title_en or recipe.title_vi
+                if new_title:
+                    exclude_titles.append(new_title)
             time.sleep(1)
 
     # --------------------------------------------------------------------------
     # Step 3: Guaranteed Fallback from Curated Pool
     # --------------------------------------------------------------------------
     if total_inserted < DAILY_CRAWL_LIMIT:
-        print(f"\n[Tier 3 Fallback] Target not reached ({total_inserted}/{DAILY_CRAWL_LIMIT}). Drawing from Curated Pool...")
+        print(f"\n[Tier 3 Fallback] Target not reached ({total_inserted}/{DAILY_CRAWL_LIMIT}). Drawing from Curated World Pool...")
         curated_recipes = get_curated_pool()
+        random.shuffle(curated_recipes)
         for recipe in curated_recipes:
             if total_inserted >= DAILY_CRAWL_LIMIT:
                 break

@@ -2,7 +2,7 @@ name: Daily Recipe Crawler & Ingestion
 
 on:
   schedule:
-    # Runs everyday at 01:00 UTC (08:00 AM Vietnam Time GMT+7)
+    # Runs everyday at 03:00 UTC (10:00 AM GMT+7)
     - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
@@ -11,9 +11,9 @@ on:
         required: false
         default: '5'
       categories:
-        description: 'Comma-separated categories/keywords'
+        description: 'Comma-separated world cuisines, categories, or dish keywords'
         required: false
-        default: 'món chiên giòn ngon,món xào đưa cơm,món kho đậm đà,món canh thanh mát,món nướng thơm lừng,món hấp thanh đạm'
+        default: 'Italian cuisine,Japanese cuisine,Mexican cuisine,Indian cuisine,Thai cuisine,Korean cuisine,French cuisine,Chinese cuisine,Greek and Mediterranean cuisine,Middle Eastern cuisine,Spanish cuisine,American comfort food,Vietnamese cuisine,Moroccan and North African cuisine,Turkish cuisine,Latin American cuisine'
 
 jobs:
   crawl-and-ingest:
@@ -45,7 +45,7 @@ jobs:
           DATABASE_NAME: ${{ secrets.DATABASE_NAME || 'what-to-eat' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           DAILY_CRAWL_LIMIT: ${{ github.event.inputs.crawl_limit || '5' }}
-          CRAWL_CATEGORIES: ${{ github.event.inputs.categories || 'món chiên giòn ngon,món xào đưa cơm,món kho đậm đà,món canh thanh mát,món nướng thơm lừng,món hấp thanh đạm' }}
+          CRAWL_CATEGORIES: ${{ github.event.inputs.categories || 'Italian cuisine,Japanese cuisine,Mexican cuisine,Indian cuisine,Thai cuisine,Korean cuisine,French cuisine,Chinese cuisine,Greek and Mediterranean cuisine,Middle Eastern cuisine,Spanish cuisine,American comfort food,Vietnamese cuisine,Moroccan and North African cuisine,Turkish cuisine,Latin American cuisine' }}
         run: |
           python scripts/crawler/auto_crawl_ingest.py
 

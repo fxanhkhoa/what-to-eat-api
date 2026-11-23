@@ -1,21 +1,22 @@
-# Automated Recipe Discovery & AI Ingestion Pipeline
+# Automated World Recipe Discovery & AI Ingestion Pipeline
 
-This service automatically discovers authentic Vietnamese recipes from the web (including Điện Máy Xanh, Cookpad, Món Ngon Mỗi Ngày, etc.) using **Google Gemini 2.5 Flash** with **Google Search Grounding**, extracts and translates them into bilingual structure, records the original source URL, resolves/creates ingredients, and ingests them into MongoDB.
+This service automatically discovers authentic recipes from cuisines all over the world (including Italian, Japanese, Mexican, Indian, Thai, Korean, French, Chinese, Mediterranean, Middle Eastern, Spanish, American, Vietnamese, Moroccan, Turkish, and Latin American dishes) from reputable international culinary websites (such as Serious Eats, BBC Good Food, Allrecipes, RecipeTin Eats, Just One Cookbook, Bon Appétit, Food Network, and Cookpad) using **Google Gemini 3.8 Flash** with **Google Search Grounding**, with automatic fallback to Direct AI generation and a Curated World Recipe Pool. It extracts and translates recipes into bilingual (`en` & `vi`) structure, records the original source URL, resolves/creates ingredients, bidirectionally links related dishes, and ingests them into MongoDB.
 
 ## Features
-- **Zero manual editing**: Translates Vietnamese and English titles, formats step-by-step semantic HTML, estimates cooking/prep time, tags, difficulty, and meal categories.
+- **Global cuisine diversity**: Shuffles across 16 world cuisines/categories and avoids duplicating existing database dishes so every run adds varied global dishes.
+- **Zero manual editing**: Translates English and Vietnamese titles, formats step-by-step semantic HTML, estimates cooking/prep time, tags (including cuisine/country), difficulty, and meal categories.
 - **Source URL tracking**: Saves the original source web URL in `sourceUrl` on each `Dish` document.
 - **Ingredient Resolution**: Extracts exact ingredient quantities and units. If an ingredient doesn't exist in MongoDB yet, it is automatically created in the `Ingredients` collection, and linked via `ingredientId`.
-- **Duplicate Prevention**: Automatically checks dish and ingredient slugs and `sourceUrl` to prevent duplicate ingestion.
+- **Duplicate Prevention**: Automatically checks dish and ingredient slugs (both English and Vietnamese) and specific `sourceUrl` paths to prevent duplicate ingestion.
 - **Cloud-Friendly**: Uses Google Search Grounding instead of scraping raw web pages directly, avoiding firewall geo-blocks and timeouts on GitHub Actions.
-- **Scheduled**: Runs automatically once a day at 08:00 AM VN time (01:00 UTC) via GitHub Actions, or manually on demand.
+- **Scheduled**: Runs automatically once a day at 03:00 UTC (10:00 AM GMT+7) via GitHub Actions, or manually on demand.
 
 ## Required Environment Variables / GitHub Secrets
 - `MONGODB_CONNECTION_STRING`: Connection URI (MongoDB Atlas or self-hosted)
 - `DATABASE_NAME`: Database name (e.g. `what-to-eat`)
 - `GEMINI_API_KEY`: API Key from Google AI Studio (`aistudio.google.com`)
 - `DAILY_CRAWL_LIMIT`: Number of dishes to crawl per run (default: `5`)
-- `CRAWL_CATEGORIES`: Comma-separated search topics (default: `món chiên giòn ngon,món xào đưa cơm,món kho đậm đà,món canh thanh mát,món nướng thơm lừng,món hấp thanh đạm`)
+- `CRAWL_CATEGORIES`: Comma-separated search cuisines/topics (default: `Italian cuisine,Japanese cuisine,Mexican cuisine,Indian cuisine,Thai cuisine,Korean cuisine,French cuisine,Chinese cuisine,Greek and Mediterranean cuisine,Middle Eastern cuisine,Spanish cuisine,American comfort food,Vietnamese cuisine,Moroccan and North African cuisine,Turkish cuisine,Latin American cuisine`)
 
 ## Running Locally
 
