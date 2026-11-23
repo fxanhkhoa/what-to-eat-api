@@ -5,6 +5,7 @@ This service automatically discovers authentic recipes from cuisines all over th
 ## Features
 - **Global cuisine diversity**: Shuffles across 16 world cuisines/categories and avoids duplicating existing database dishes so every run adds varied global dishes.
 - **Zero manual editing**: Translates English and Vietnamese titles, formats step-by-step semantic HTML, estimates cooking/prep time, tags (including cuisine/country), difficulty, and meal categories.
+- **Verified Image Resolution**: Validates AI-provided thumbnails and automatically resolves working high-resolution food photos via source recipe page scraping (JSON-LD `Recipe.image`, `og:image`, `twitter:image`), TheMealDB, Wikipedia PageImages, and Wikimedia Commons.
 - **Source URL tracking**: Saves the original source web URL in `sourceUrl` on each `Dish` document.
 - **Ingredient Resolution**: Extracts exact ingredient quantities and units. If an ingredient doesn't exist in MongoDB yet, it is automatically created in the `Ingredients` collection, and linked via `ingredientId`.
 - **Duplicate Prevention**: Automatically checks dish and ingredient slugs (both English and Vietnamese) and specific `sourceUrl` paths to prevent duplicate ingestion.
